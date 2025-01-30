@@ -140,3 +140,9 @@
   C'est très simple ! On parle à l'I.A. comme à un humain, en fait. [Il faut aller ici](https://github.com/XenocodeRCE/Philosophix/blob/bff8d4768b5265e904cf3406b468102d42401f33/src/correction.js#L164) et [là aussi](https://github.com/XenocodeRCE/Philosophix/blob/bff8d4768b5265e904cf3406b468102d42401f33/src/correction.js#L302), et changer les informations écrites. Attention, je ne garantis pas que vos modifications feront marcher le script.
   
 </details>
+
+## Photos
+![](https://i.imgur.com/wO0bmE4.png)
+![](https://i.imgur.com/xGnnRvU.png)
+![](https://i.imgur.com/KlOeY3M.png)
+![](https://i.imgur.com/VsCmsod.png)
