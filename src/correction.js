@@ -193,7 +193,7 @@ async function evaluerCompetence(competence, copie, enonce) {
     `;
 
     try {
-        const response = await fetch('https://philo-lycee.fr/api/openai.php', {
+        const response = await fetch('openai.php', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
@@ -338,7 +338,7 @@ async function evaluerFinal(results, copie) {
     `;
 
     try {
-        const response = await fetch('https://philo-lycee.fr/api/openai.php', {
+        const response = await fetch('openai.php', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
