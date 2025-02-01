@@ -413,6 +413,29 @@ try {
                 grid-template-columns: repeat(1, minmax(0, 1fr));
             }
         }
+
+        @media print {
+            body {
+                background-color: white;
+            }
+            .top-bar, .nav-container, .nav-links, .nav-button, .hamburger, .modal, .modal-content, .qrCodeContainer,
+            #previewBox, #enonceBox, .bg-white.rounded-lg.p-4.mt-4.shadow-md {
+                display: none !important;
+            }
+            .content {
+                margin: 0;
+                padding: 0;
+            }
+            .main-section {
+                display: block;
+            }
+            .feedback-box, .grade-box, .skill-item {
+                page-break-inside: avoid;
+            }
+            .skill-content {
+                max-height: none !important;
+            }
+        }
     </style>
 </head>
 <body>
@@ -491,19 +514,16 @@ try {
                     </div>
                 </div>
 
-                <!-- Boîte de partage -->
-                <div class="bg-white rounded-lg p-4 mt-4 shadow-md hover:shadow-lg transition-all duration-300">
-                    <h3 class="text-lg font-semibold mb-3">Partager</h3>
-                    <div class="flex justify-center space-x-4">
-                        <button id="copyUrlButton" class="text-blue-600 hover:text-blue-800 transition-colors">
-                            <i class="fas fa-copy mr-2"></i>Copier l'URL
-                        </button>
-                        <button id="qrCodeButton" class="text-blue-600 hover:text-blue-800 transition-colors">
-                            <i class="fas fa-qrcode mr-2"></i>Voir le QR Code
-                        </button>
+                <!-- Aperçu de l'énoncé -->
+                <div id="enonceBox" class="bg-white rounded-lg p-4 cursor-pointer shadow-md hover:shadow-lg transition-all duration-300 mt-4">
+                    <h3 class="text-lg font-semibold mb-3">Énoncé du devoir</h3>
+                    <div class="text-gray-600 text-sm mb-3">
+                        <?php echo substr(htmlspecialchars($correction['devoir_enonce']), 0, 150) . '...'; ?>
                     </div>
-                    <div id="qrCodeContainer" class="flex justify-center mt-4 hidden">
-                        <img id="qrCodeImage" src="" alt="QR Code">
+                    <div class="flex justify-center">
+                        <button class="text-blue-600 hover:text-blue-800 transition-colors">
+                            <i class="fas fa-search mr-2"></i>Voir l'énoncé complet
+                        </button>
                     </div>
                 </div>
 
@@ -515,6 +535,25 @@ try {
                                 class="text-green-600 hover:text-green-800 transition-colors">
                             <i class="fas fa-arrow-up mr-2"></i>Comment m'améliorer ?
                         </button>
+                    </div>
+                </div>
+
+                <!-- Boîte de partage -->
+                <div class="bg-white rounded-lg p-4 mt-4 shadow-md hover:shadow-lg transition-all duration-300">
+                    <h3 class="text-lg font-semibold mb-3">Partager</h3>
+                    <div class="flex justify-center space-x-4">
+                        <button id="copyUrlButton" class="text-blue-600 hover:text-blue-800 transition-colors">
+                            <i class="fas fa-copy mr-2"></i>Copier l'URL
+                        </button>
+                        <button id="qrCodeButton" class="text-blue-600 hover:text-blue-800 transition-colors">
+                            <i class="fas fa-qrcode mr-2"></i>Voir le QR Code
+                        </button>
+                        <button id="printButton" class="text-blue-600 hover:text-blue-800 transition-colors">
+                            <i class="fas fa-print mr-2"></i>Imprimer
+                        </button>
+                    </div>
+                    <div id="qrCodeContainer" class="flex justify-center mt-4 hidden">
+                        <img id="qrCodeImage" src="" alt="QR Code">
                     </div>
                 </div>
             </div>
@@ -589,6 +628,19 @@ try {
             <h2 class="text-2xl font-bold mb-4">Copie complète</h2>
             <div class="prose max-w-none" style="text-align: justify;">
                 <?php echo nl2br(htmlspecialchars($correction['copie'])); ?>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal pour l'énoncé complet -->
+    <div class="modal" id="enonceModal">
+        <div class="modal-content">
+            <button class="absolute top-4 right-4 text-gray-600 hover:text-gray-800 text-2xl" id="closeEnonceModal">
+                <i class="fas fa-times"></i>
+            </button>
+            <h2 class="text-2xl font-bold mb-4">Énoncé complet</h2>
+            <div class="prose max-w-none" style="text-align: justify;">
+                <?php echo nl2br(htmlspecialchars($correction['devoir_enonce'])); ?>
             </div>
         </div>
     </div>
@@ -705,6 +757,46 @@ try {
             const url = window.location.href;
             qrCodeImage.src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(url)}`;
             qrCodeContainer.classList.toggle('hidden');
+        });
+
+        // Gestion de la modal pour l'énoncé complet
+        const enonceModal = document.getElementById('enonceModal');
+        const enonceBox = document.getElementById('enonceBox');
+        const closeEnonceModal = document.getElementById('closeEnonceModal');
+
+        enonceBox.addEventListener('click', () => {
+            enonceModal.classList.add('active');
+            document.body.style.overflow = 'hidden'; // Empêche le défilement du body
+        });
+
+        const closeEnonceModalFunction = () => {
+            enonceModal.classList.remove('active');
+            document.body.style.overflow = ''; // Réactive le défilement du body
+        };
+
+        closeEnonceModal.addEventListener('click', closeEnonceModalFunction);
+
+        enonceModal.addEventListener('click', (e) => {
+            if (e.target === enonceModal) {
+                closeEnonceModalFunction();
+            }
+        });
+
+        // Fermeture de la modal avec la touche Echap
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && enonceModal.classList.contains('active')) {
+                closeEnonceModalFunction();
+            }
+        });
+
+        // Gestion du bouton d'impression
+        const printButton = document.getElementById('printButton');
+        printButton.addEventListener('click', () => {
+            // Dérouler toutes les compétences avant l'impression
+            document.querySelectorAll('.skill-content').forEach(content => {
+                content.classList.add('active');
+            });
+            window.print();
         });
     </script>
 </body>
