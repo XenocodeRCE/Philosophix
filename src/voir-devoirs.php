@@ -3,13 +3,12 @@ require_once 'config.php';
 
 try {
     // Récupération des devoirs
-    $stmt = $pdo->prepare("
+    $stmt = $pdo->query("
         SELECT c.id, c.note, c.date_correction, d.titre as devoir_titre
         FROM corrections c
         JOIN devoirs d ON c.devoir_id = d.id
         ORDER BY c.date_correction DESC
     ");
-    $stmt->execute();
     $corrections = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 } catch (Exception $e) {
@@ -380,7 +379,7 @@ body {
     <!-- Navigation -->
     <nav class="top-bar">
         <div class="nav-container">
-            <div class="logo">AutoCorrect</div>
+            <div class="logo">Philosophix</div>
             <div class="hamburger">
                 <span></span>
                 <span></span>
@@ -388,9 +387,9 @@ body {
             </div>
             <div class="nav-links">
                 <a href="creer-devoir.php">Créer</a>
-                <a href="corriger-copie.php">Corriger</a>
+                 
                 <a href="voir-devoirs.php">Consulter</a>
-                <button class="nav-button">Se connecter</button>
+                <button class="nav-button" onclick="window.location.href = 'corriger-copie.php';">Corriger une copie ✨</button>
             </div>
         </div>
     </nav>

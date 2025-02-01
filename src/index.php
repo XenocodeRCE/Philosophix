@@ -201,7 +201,7 @@
 <body>
     <nav class="top-bar">
         <div class="nav-container">
-            <div class="logo">AutoCorrect</div>
+            <div class="logo">Philosophix</div>
             <div class="hamburger">
                 <span></span>
                 <span></span>
@@ -209,9 +209,10 @@
             </div>
             <div class="nav-links">
                 <a href="creer-devoir.php">Créer</a>
-                <a href="corriger-copie.php">Corriger</a>
+                 
                 <a href="voir-devoirs.php">Consulter</a>
-                <button class="nav-button">Se connecter</button>
+                <button class="nav-button" onclick="window.location.href = 'corriger-copie.php';">Corriger une copie ✨</button>
+           
             </div>
         </div>
     </nav>

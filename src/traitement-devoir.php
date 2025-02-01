@@ -35,8 +35,7 @@ try {
     }
 
     // Récupération du barème par défaut
-    $stmt = $pdo->prepare("SELECT bareme FROM devoirs WHERE id = 1");
-    $stmt->execute();
+    $stmt = $pdo->query("SELECT bareme FROM devoirs WHERE id = 1");
     $bareme = $stmt->fetchColumn();
 
     if (!$bareme) {
@@ -59,4 +58,3 @@ try {
         'message' => $e->getMessage()
     ]);
 }
-?>

@@ -264,7 +264,7 @@
     <!-- Navigation -->
     <nav class="top-bar">
         <div class="nav-container">
-            <div class="logo">AutoCorrect</div>
+            <div class="logo">Philosophix</div>
             <div class="hamburger">
                 <span></span>
                 <span></span>
@@ -272,9 +272,9 @@
             </div>
             <div class="nav-links">
                 <a href="creer-devoir.php">Créer</a>
-                <a href="corriger-copie.php">Corriger</a>
+                 
                 <a href="voir-devoirs.php">Consulter</a>
-                <button class="nav-button">Se connecter</button>
+                <button class="nav-button" onclick="window.location.href = 'corriger-copie.php';">Corriger une copie ✨</button>
             </div>
         </div>
     </nav>
@@ -309,10 +309,9 @@
                 <select id="devoir_id" name="devoir_id" class="w-full p-2 border rounded">
                     <option value="">Sélectionnez un devoir...</option>
                     <?php
-                    $stmt = $pdo->prepare("SELECT id, titre FROM devoirs ORDER BY date_creation DESC");
-                    $stmt->execute();
+                    $stmt = $pdo->query("SELECT id, titre FROM devoirs ORDER BY date_creation DESC");
                     while ($row = $stmt->fetch()) {
-                        echo "<option value='" . htmlspecialchars($row['id']) . "'>" . htmlspecialchars($row['titre']) . "</option>";
+                        echo "<option value='" . $row['id'] . "'>" . htmlspecialchars($row['titre']) . "</option>";
                     }
                     ?>
                 </select>
@@ -333,6 +332,17 @@
                     <input style="visibility: hidden" type="file" id="copie_file" accept=".txt,.doc,.docx,.pdf" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700">
                     
                     
+                </div>
+            </div>
+
+            <!-- Étape 3: Mot de passe -->
+            <div id="step3" class="mb-8 hidden">
+                <h2 class="text-xl font-bold mb-4">Étape 3: Mot de passe</h2>
+                <div>
+                    <label class="block text-gray-700 text-sm font-bold mb-2">
+                        Mot de passe
+                    </label>
+                    <input type="password" id="password" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700" required>
                 </div>
             </div>
 
@@ -386,6 +396,7 @@
         </div>
     </div>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.0.0/crypto-js.min.js"></script>
     <script src="correction.js"></script>
     <script>
         // Script pour la navigation mobile
@@ -415,15 +426,18 @@
         document.addEventListener('DOMContentLoaded', () => {
             const devoirSelect = document.getElementById('devoir_id');
             const step2 = document.getElementById('step2');
+            const step3 = document.getElementById('step3');
             const corrigerBtn = document.getElementById('corriger');
 
             devoirSelect.addEventListener('change', function() {
                 console.log('Devoir sélectionné:', this.value);
                 if (this.value) {
                     step2.classList.remove('hidden');
+                    step3.classList.remove('hidden');
                     corrigerBtn.classList.remove('hidden');
                 } else {
                     step2.classList.add('hidden');
+                    step3.classList.add('hidden');
                     corrigerBtn.classList.add('hidden');
                 }
             });

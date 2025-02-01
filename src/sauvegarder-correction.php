@@ -3,10 +3,6 @@ require_once 'config.php';
 
 header('Content-Type: application/json');
 
-function sanitizeInput($input) {
-    return htmlspecialchars(strip_tags($input));
-}
-
 try {
     $data = json_decode(file_get_contents('php://input'), true);
     if (!$data) {
@@ -27,11 +23,11 @@ try {
     $stmt->execute([
         $data['devoir_id'],
         $data['note'],
-        sanitizeInput($data['appreciation']),
+        $data['appreciation'],
         json_encode($data['points_forts']),
         json_encode($data['points_ameliorer']),
         json_encode($data['competences']),
-        sanitizeInput($data['copie']),
+        $data['copie'],
         $data['date_correction']
     ]);
 
@@ -48,9 +44,9 @@ try {
     foreach ($data['competences'] as $comp) {
         $stmt->execute([
             $correction_id,
-            sanitizeInput($comp['nom']),
+            $comp['nom'],
             $comp['note'],
-            sanitizeInput($comp['analyse']),
+            $comp['analyse'],
             json_encode($comp['points_forts']),
             json_encode($comp['points_ameliorer'])
         ]);
@@ -73,4 +69,3 @@ try {
         'message' => $e->getMessage()
     ]);
 }
-?>

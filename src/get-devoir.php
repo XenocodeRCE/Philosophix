@@ -7,8 +7,8 @@ error_reporting(E_ALL);
 
 header('Content-Type: application/json');
 
-if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
-    echo json_encode(['error' => 'ID du devoir non fourni ou invalide']);
+if (!isset($_GET['id'])) {
+    echo json_encode(['error' => 'ID du devoir non fourni']);
     exit;
 }
 
@@ -57,4 +57,3 @@ try {
         'trace' => $e->getTraceAsString()
     ]);
 }
-?>

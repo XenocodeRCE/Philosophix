@@ -1,16 +1,23 @@
 console.log('Script de correction chargé'); // Debug
 
+// Inclure la bibliothèque md5
+function md5(string) {
+    return CryptoJS.MD5(string).toString();
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM chargé'); // Debug
     
     const devoirSelect = document.getElementById('devoir_id');
     const step2 = document.getElementById('step2');
+    const step3 = document.getElementById('step3');
     const corrigerBtn = document.getElementById('corriger');
     
-    if (!devoirSelect || !step2 || !corrigerBtn) {
+    if (!devoirSelect || !step2 || !step3 || !corrigerBtn) {
         console.error('Éléments manquants:', {
             devoirSelect: !!devoirSelect,
             step2: !!step2,
+            step3: !!step3,
             corrigerBtn: !!corrigerBtn
         });
         return;
@@ -20,9 +27,11 @@ document.addEventListener('DOMContentLoaded', function() {
     devoirSelect.addEventListener('change', async function() {
         if (this.value) {
             step2.classList.remove('hidden');
+            step3.classList.remove('hidden');
             corrigerBtn.classList.remove('hidden');
         } else {
             step2.classList.add('hidden');
+            step3.classList.add('hidden');
             corrigerBtn.classList.add('hidden');
             document.getElementById('resultats').classList.add('hidden');
         }
@@ -33,6 +42,13 @@ document.addEventListener('DOMContentLoaded', function() {
         const devoir_id = devoirSelect.value;
         const fileInput = document.getElementById('copie_file');
         const textInput = document.getElementById('copie_text');
+        const passwordInput = document.getElementById('password');
+        const passwordHash = md5(passwordInput.value);
+
+        if (passwordHash !== 'eb1ec90d51150748189a5c844d9faa45') {
+            alert('Mot de passe invalide');
+            return;
+        }
 
         if (fileInput.files.length > 0) {
             try {
@@ -161,19 +177,21 @@ class ProgressManager {
     }
 }
 
-async function evaluerCompetence(competence, copie, enonce) {
+async function evaluerCompetence(competence, copie, enonce, typeDevoir) {
     const prompt = `
-    Évaluez la compétence "${competence.nom}" dans cette dissertation philosophique.
+    Évaluez la compétence "${competence.nom}" dans cette composition philosophique.
     
     Critères d'évaluation :
     ${competence.criteres.join('\n')}
     
-    Sujet de la dissertation :
+    Sujet du travail :
     ${enonce}
 
     Niveau scolaire de l'élève : Terminale au lycée.
 
     Style d'appréciation : Formel, vouvoie l'apprenant.
+
+    Type de devoir : ${typeDevoir}
 
     Copie de l'élève :
     ${copie}
@@ -193,13 +211,13 @@ async function evaluerCompetence(competence, copie, enonce) {
     `;
 
     try {
-        const response = await fetch('openai.php', {
+        const response = await fetch('https://philo-lycee.fr/api/openai.php', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
             },
             body: new URLSearchParams({
-                'system': 'Vous êtes un professeur de philosophie expérimenté qui corrige des dissertations.',
+                'system': 'Vous êtes un professeur de philosophie expérimenté qui corrige des rédactions.',
                 'prompt': prompt
             })
         });
@@ -235,7 +253,7 @@ async function corrigerCopie(devoir_id, copie) {
             progress.updateCompetenceProgress(competence.id, "Évaluation en cours...", 50);
             
             try {
-                const evaluation = await evaluerCompetence(competence, copie, devoir.enonce);
+                const evaluation = await evaluerCompetence(competence, copie, devoir.enonce, devoir.type);
                 const parsedEvaluation = extractJsonFromApiResponse(evaluation);
                 
                 progress.updateCompetenceProgress(competence.id, "Évaluation terminée", 100);
@@ -253,7 +271,7 @@ async function corrigerCopie(devoir_id, copie) {
         const results = await Promise.all(evaluationPromises);
 
         // Évaluation finale
-        const evaluationFinale = await evaluerFinal(results, copie);
+        const evaluationFinale = await evaluerFinal(results, copie, devoir.type);
         const parsedEvaluationFinale = extractJsonFromApiResponse(evaluationFinale);
 
         // Calculer la note moyenne
@@ -299,20 +317,12 @@ async function corrigerCopie(devoir_id, copie) {
     }
 }
 
-async function evaluerFinal(results, copie) {
-    const prompt = `
-    En tant que professeur de philosophie, faites une évaluation globale de cette copie.
-    Voici les évaluations par compétence :
-    ${results.map(r => `${r.competence.nom}: ${r.evaluation.note}/20 - ${r.evaluation.analyse}`).join('\n')}
+async function evaluerFinal(results, copie, typeDevoir) {
 
-    Copie de l'élève :
-    ${copie}
+    let echelleNotation = '';
 
-    Niveau scolaire de l'élève : Terminale au lycée.
-
-    Style d'appréciation : Formel, vouvoie l'apprenant.
-
-    Échelle d’évaluation pour guider la notation des copies :
+    if (typeDevoir === 'dissertation') {
+        echelleNotation = `Échelle d’évaluation pour guider la notation des copies :
     """
     - Ce qui est valorisé : une problématisation du sujet, une argumentation cohérente et progressive, l’analyse de concepts (notions, distinctions) et d’exemples précisément étudiés, la mobilisation d’éléments de culture philosophique au service du traitement du sujet, la capacité de la réflexion à entrer en dialogue avec elle-même. 
     - Ce qui est sanctionné : la paraphrase du texte, la récitation de cours sans lien avec le sujet, l’accumulation de lieux communs, la juxtaposition d’exemples sans réflexion, l’absence de problématisation, l’absence de rigueur dans le raisonnement, l’absence de culture philosophique mobilisée pour traiter le sujet.
@@ -324,7 +334,37 @@ async function evaluerFinal(results, copie) {
     - Pas moins de 12 → Si, en plus, il y a mobilisation de références et d’exemples pertinents pour le sujet.
     - Pas moins de 14 → Si, en plus, le raisonnement est construit, progressif, et que les affirmations posées sont rigoureusement justifiées.
     - Pas moins de 16 → Si, en plus, la copie témoigne de la maîtrise de concepts philosophiques utiles pour le sujet (notions, repères), d’une démarche de recherche et du souci des enjeux de la question, d’une précision dans l’utilisation d’une culture au service du traitement du sujet. 
+    """`;
+    }else{
+        echelleNotation = `Échelle d’évaluation pour guider la notation des copies :
     """
+    - Ce qui est valorisé : une détermination du problème du texte, une explication de ses éléments signifiants, une explicitation des articulations du texte, une caractérisation  de la position philosophique élaborée par  l’auteur dans le texte, et, plus généralement,  du questionnement auquel elle s’articule.
+    - Ce qui est sanctionné : la paraphrase du texte, la récitation de cours sans lien avec le texte de l'auteur, l’accumulation de lieux communs, la juxtaposition d’exemples sans réflexion, l’absence de problématisation du texte, l’absence de rigueur dans le raisonnement, l’absence de culture philosophique mobilisée pour traiter le sujet.
+
+    # Échelle de notation :
+    - Entre 0 et 5 → copie très insuffisante : inintelligible ; non structurée ; excessivement brève ; marquant un refus manifeste de faire l’exercice.
+    - De 06 à 09 → Copie intelligible mais qui ne répond pas aux critères attestés de l’épreuve : propos excessivement général ou restant sans rapport avec la question posée ; juxtaposition d’exemples sommaires ou anecdotiques ; accumulation de lieux communs ; paraphrase ou répétition du texte ; récitation de cours sans traitement du sujet ;- copie qui aurait pu être rédigée au début de l’année, sans aucun cours de philosophie ou connaissances acquises.
+    - Pas moins de 10 → Copie faisant l’effort de réaliser l’exercice, même si l’explication demeure maladroite et inaboutie : explication commençante ; pas de contresens majeur sur le propos et la démarche de l’auteur.
+    - Pas moins de 12 → Si, en plus, le texte est interrogé avec un effort d’attention au détail du propos, ainsi qu’à sa structure logique.
+    - Pas moins de 14 → Si, en plus, les éléments du texte sont mis en perspective, avec des éléments de connaissance permettant de déterminer et d’examiner le problème.
+    - Pas moins de 16 → Si, en plus, l’explication est développée avec amplitude et justesse : l’ensemble du texte est examiné et bien situé dans une problématique  et un questionnement pertinents.
+    """
+    `;
+    }
+    const prompt = `
+    Type de devoir : ${typeDevoir}
+    En tant que professeur de philosophie, faites une évaluation globale de cette copie.
+    Voici les évaluations par compétence :
+    ${results.map(r => `${r.competence.nom}: ${r.evaluation.note}/20 - ${r.evaluation.analyse}`).join('\n')}
+
+    Copie de l'élève :
+    ${copie}
+
+    Niveau scolaire de l'élève : Terminale au lycée.
+
+    Style d'appréciation : Formel, vouvoie l'apprenant.
+
+    ${echelleNotation}
 
     Répondez UNIQUEMENT au format JSON suivant :
     {
@@ -338,13 +378,13 @@ async function evaluerFinal(results, copie) {
     `;
 
     try {
-        const response = await fetch('openai.php', {
+        const response = await fetch('https://philo-lycee.fr/api/openai.php', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
             },
             body: new URLSearchParams({
-                'system': 'Vous êtes un professeur de philosophie expérimenté qui corrige des dissertations.',
+                'system': 'Vous êtes un professeur de philosophie expérimenté qui corrige des rédactions.',
                 'prompt': prompt
             })
         });

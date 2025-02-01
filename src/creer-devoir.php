@@ -1,22 +1,21 @@
 <?php
 require_once 'config.php';
 
-function sanitizeInput($data) {
-    return htmlspecialchars(stripslashes(trim($data)));
-}
-
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    $titre = sanitizeInput($_POST['titre']);
-    $enonce = sanitizeInput($_POST['enonce']);
+    $titre = $_POST['titre'];
+    $enonce = $_POST['enonce'];
+    $type = $_POST['type'];
     $contenu = "n/a";
-    
-    $bareme_default = '{ "competences": [ { "id": 1, "nom": "Compréhension et analyse du sujet", "criteres": [ "Identifier les termes clés d\'un sujet", "Reformuler le sujet avec ses propres mots", "Formuler une problématique pertinente" ] }, { "id": 2, "nom": "Élaboration d\'un plan structuré", "criteres": [ "Organiser ses idées de manière logique", "Connaître les différents types de plans", "Annoncer clairement son plan dans l\'introduction" ] }, { "id": 3, "nom": "Rédaction de l\'introduction et de la conclusion", "criteres": [ "Rédiger une accroche efficace", "Maîtriser les étapes clés de l\'introduction", "Synthétiser et ouvrir la réflexion" ] }, { "id": 4, "nom": "Développement de l\'argumentation", "criteres": [ "Construire des paragraphes argumentatifs", "Utiliser des exemples pertinents", "Intégrer des références" ] }, { "id": 5, "nom": "Maîtrise de la langue française", "criteres": [ "Orthographe et grammaire", "Vocabulaire spécifique", "Fluidité de la syntaxe" ] }, { "id": 6, "nom": "Cohérence et cohésion textuelle", "criteres": [ "Utiliser des connecteurs logiques", "Assurer la cohérence entre les parties", "Contribuer à la problématique" ] }, { "id": 7, "nom": "Esprit critique et réflexion personnelle", "criteres": [ "Prise de position argumentée", "Évaluer les arguments", "Réflexion personnelle" ] } ] }';
-    
-    $type = "dissertation";
+
+    $bareme_dissertation = '{ "competences": [ { "id": 1, "nom": "Compréhension et analyse du sujet", "criteres": [ "Identifier les termes clés d\'un sujet", "Reformuler le sujet avec ses propres mots", "Formuler une problématique pertinente" ] }, { "id": 2, "nom": "Élaboration d\'un plan structuré", "criteres": [ "Organiser ses idées de manière logique", "Connaître les différents types de plans", "Annoncer clairement son plan dans l\'introduction" ] }, { "id": 3, "nom": "Rédaction de l\'introduction et de la conclusion", "criteres": [ "Rédiger une accroche efficace", "Maîtriser les étapes clés de l\'introduction", "Synthétiser et ouvrir la réflexion" ] }, { "id": 4, "nom": "Développement de l\'argumentation", "criteres": [ "Construire des paragraphes argumentatifs", "Utiliser des exemples pertinents", "Intégrer des références" ] }, { "id": 5, "nom": "Maîtrise de la langue française", "criteres": [ "Orthographe et grammaire", "Vocabulaire spécifique", "Fluidité de la syntaxe" ] }, { "id": 6, "nom": "Cohérence et cohésion textuelle", "criteres": [ "Utiliser des connecteurs logiques", "Assurer la cohérence entre les parties", "Contribuer à la problématique" ] }, { "id": 7, "nom": "Esprit critique et réflexion personnelle", "criteres": [ "Prise de position argumentée", "Évaluer les arguments", "Réflexion personnelle" ] } ] }';
+
+    $bareme_explication = '{ "competences": [ { "id": 1, "nom": "Lecture analytique et compréhension globale", "criteres": [ "Identification de la thèse principale", "Repérage de la structure générale", "Compréhension des enjeux du texte" ] }, { "id": 2, "nom": "Analyse de la structure argumentative", "criteres": [ "Découpage en séquences logiques", "Repérage des articulations", "Identification des mouvements du texte" ] }, { "id": 3, "nom": "Analyse conceptuelle", "criteres": [ "Définition des concepts clés", "Compréhension des distinctions conceptuelles", "Mise en relation des notions" ] }, { "id": 4, "nom": "Analyse argumentative", "criteres": [ "Reconstruction des raisonnements", "Identification des types d\'arguments", "Repérage des exemples et illustrations" ] }, { "id": 5, "nom": "Contextualisation philosophique", "criteres": [ "Situation historique", "Liens avec d\'autres auteurs", "Mobilisation des connaissances du cours" ] }, { "id": 6, "nom": "Expression et rédaction", "criteres": [ "Clarté de l\'explication", "Précision du vocabulaire", "Structure de l\'explication" ] }, { "id": 7, "nom": "Appropriation critique", "criteres": [ "Évaluation de la cohérence", "Discussion des arguments", "Prolongements pertinents" ] } ] }';
+
+    $bareme = $type == 'explication' ? $bareme_explication : $bareme_dissertation;
 
     try {
         $stmt = $pdo->prepare("INSERT INTO devoirs (titre, enonce, contenu, date_creation, bareme, type) VALUES (?, ?, ?, NOW(), ?, ?)");
-        $stmt->execute([$titre, $enonce, $contenu, $bareme_default, $type]);
+        $stmt->execute([$titre, $enonce, $contenu, $bareme, $type]);
         
         header("Location: voir-devoirs.php");
         exit();
@@ -319,7 +318,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 <body>
     <nav class="top-bar">
         <div class="nav-container">
-            <div class="logo">AutoCorrect</div>
+            <div class="logo">Philosophix</div>
             <div class="hamburger">
                 <span></span>
                 <span></span>
@@ -327,9 +326,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             </div>
             <div class="nav-links">
                 <a href="creer-devoir.php">Créer</a>
-                <a href="corriger-copie.php">Corriger</a>
+                 
                 <a href="voir-devoirs.php">Consulter</a>
-                <button class="nav-button">Se connecter</button>
+                <button class="nav-button" onclick="window.location.href = 'corriger-copie.php';">Corriger une copie ✨</button>
             </div>
         </div>
     </nav>
@@ -366,6 +365,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                         class="form-textarea" 
                         required
                     ><?php echo isset($_POST['enonce']) ? htmlspecialchars($_POST['enonce']) : ''; ?></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="type">Type de devoir</label>
+                    <select id="type" name="type" class="form-input" required>
+                        <option value="dissertation" <?php echo (isset($_POST['type']) && $_POST['type'] == 'dissertation') ? 'selected' : ''; ?>>Dissertation</option>
+                        <option value="explication" <?php echo (isset($_POST['type']) && $_POST['type'] == 'explication') ? 'selected' : ''; ?>>Explication de texte</option>
+                    </select>
                 </div>
 
                 <button type="submit" class="submit-button">Créer le devoir</button>

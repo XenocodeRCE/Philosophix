@@ -1,7 +1,7 @@
 <?php
 require_once 'config.php';
 
-if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
+if (!isset($_GET['id'])) {
     header('Location: index.php');
     exit;
 }
@@ -408,7 +408,7 @@ try {
 <body>
 <nav class="top-bar">
     <div class="nav-container">
-        <div class="logo">AutoCorrect</div>
+        <div class="logo">Philosophix</div>
         <div class="hamburger">
             <span></span>
             <span></span>
@@ -416,9 +416,9 @@ try {
         </div>
         <div class="nav-links">
             <a href="creer-devoir.php">Créer</a>
-            <a href="corriger-copie.php">Corriger</a>
+             
             <a href="voir-devoirs.php">Consulter</a>
-            <button class="nav-button">Se connecter</button>
+            <button class="nav-button" onclick="window.location.href = 'corriger-copie.php';">Corriger une copie ✨</button>
         </div>
     </div>
 </nav>
