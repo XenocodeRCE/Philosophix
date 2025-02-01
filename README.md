@@ -48,7 +48,7 @@
 
 
 <details>
-  <summary>Détails :</summary>
+  <summary>Détails pour la dissertation:</summary>
   
   ```json
 {
@@ -118,6 +118,81 @@
       }
     ]
   }
+```
+  
+</details>
+
+<details>
+  <summary>Détails pour l'explication/commentaire de texte:</summary>
+  
+  ```json
+{
+  "competences": [
+    {
+      "id": 1,
+      "nom": "Lecture analytique et compréhension globale",
+      "criteres": [
+        "Identification de la thèse principale",
+        "Repérage de la structure générale",
+        "Compréhension des enjeux du texte"
+      ]
+    },
+    {
+      "id": 2,
+      "nom": "Analyse de la structure argumentative",
+      "criteres": [
+        "Découpage en séquences logiques", 
+        "Repérage des articulations",
+        "Identification des mouvements du texte"
+      ]
+    },
+    {
+      "id": 3,
+      "nom": "Analyse conceptuelle",
+      "criteres": [
+        "Définition des concepts clés",
+        "Compréhension des distinctions conceptuelles",
+        "Mise en relation des notions"
+      ]
+    },
+    {
+      "id": 4,
+      "nom": "Analyse argumentative",
+      "criteres": [
+        "Reconstruction des raisonnements",
+        "Identification des types d'arguments",
+        "Repérage des exemples et illustrations"
+      ]
+    },
+    {
+      "id": 5,
+      "nom": "Contextualisation philosophique",
+      "criteres": [
+        "Situation historique",
+        "Liens avec d'autres auteurs",
+        "Mobilisation des connaissances du cours"
+      ]
+    },
+    {
+      "id": 6,
+      "nom": "Expression et rédaction",
+      "criteres": [
+        "Clarté de l'explication",
+        "Précision du vocabulaire",
+        "Structure de l'explication"
+      ]
+    },
+    {
+      "id": 7,
+      "nom": "Appropriation critique",
+      "criteres": [
+        "Évaluation de la cohérence",
+        "Discussion des arguments",
+        "Prolongements pertinents"
+      ]
+    }
+  ]
+}
 ```
   
 </details>
