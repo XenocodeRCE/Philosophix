@@ -1,16 +1,22 @@
-SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
-START TRANSACTION;
-SET time_zone = "+00:00";
-
-
-/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
-/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
-/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
-/*!40101 SET NAMES utf8mb4 */;
-
 --
 -- Database: `exam`
 --
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `ameliorations`
+--
+
+CREATE TABLE `ameliorations` (
+  `id` int(11) NOT NULL,
+  `correction_id` int(11) DEFAULT NULL,
+  `objectifs` text DEFAULT NULL,
+  `exercices_suggeres` text DEFAULT NULL,
+  `ressources_recommandees` text DEFAULT NULL,
+  `methodologie` text DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
 
 -- --------------------------------------------------------
 
@@ -68,6 +74,13 @@ CREATE TABLE `evaluations_competences` (
 --
 
 --
+-- Indexes for table `ameliorations`
+--
+ALTER TABLE `ameliorations`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `correction_id` (`correction_id`);
+
+--
 -- Indexes for table `corrections`
 --
 ALTER TABLE `corrections`
@@ -92,6 +105,12 @@ ALTER TABLE `evaluations_competences`
 --
 
 --
+-- AUTO_INCREMENT for table `ameliorations`
+--
+ALTER TABLE `ameliorations`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT for table `corrections`
 --
 ALTER TABLE `corrections`
@@ -112,6 +131,12 @@ ALTER TABLE `evaluations_competences`
 --
 -- Constraints for dumped tables
 --
+
+--
+-- Constraints for table `ameliorations`
+--
+ALTER TABLE `ameliorations`
+  ADD CONSTRAINT `ameliorations_ibfk_1` FOREIGN KEY (`correction_id`) REFERENCES `corrections` (`id`);
 
 --
 -- Constraints for table `corrections`

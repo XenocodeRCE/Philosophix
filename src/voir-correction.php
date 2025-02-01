@@ -219,14 +219,20 @@ try {
         }
 
         .grade-box {
-            background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);
+            background: #152f20; /* Changer la couleur de fond */
             padding: 2rem;
             border-radius: 12px;
             text-align: center;
             position: relative;
             margin-bottom: 1rem;
             color: white;
-            animation: gradeBorder 4s linear infinite;
+            animation: lightShadow 4s linear infinite; /* Ajouter l'animation */
+        }
+
+        @keyframes lightShadow {
+            0% { box-shadow: 0 0 20px rgba(21, 47, 32, 0.4); }
+            50% { box-shadow: 0 0 30px rgba(21, 47, 32, 0.6); }
+            100% { box-shadow: 0 0 20px rgba(21, 47, 32, 0.4); }
         }
 
         .grade {
@@ -273,7 +279,7 @@ try {
         }
 
         .skill-content.active {
-            max-height: 500px;
+            max-height: 1500px;
         }
 
         /* Modal styles */
@@ -402,7 +408,11 @@ try {
     }
 }
 
-
+        @media (max-width: 768px) {
+            .grid-cols-2 {
+                grid-template-columns: repeat(1, minmax(0, 1fr));
+            }
+        }
     </style>
 </head>
 <body>
@@ -432,7 +442,7 @@ try {
                 <!-- Appréciation générale -->
                 <div class="appreciation mb-8">
                     <h2 class="text-xl font-semibold mb-3">Appréciation générale</h2>
-                    <p class="text-gray-700"><?php echo nl2br(htmlspecialchars($correction['appreciation'])); ?></p>
+                    <p style="text-align: justify;" class="text-gray-700"><?php echo nl2br(htmlspecialchars($correction['appreciation'])); ?></p>
                 </div>
 
                 <!-- Points forts et à améliorer -->
@@ -461,7 +471,7 @@ try {
                 </div>
             </div>
 
-            <div class="right-column w-1/3">
+            <div class="right-column">
                 <!-- Note -->
                 <div class="grade-box">
                     <h3 class="text-lg mb-2 opacity-90">Note finale</h3>
@@ -477,6 +487,33 @@ try {
                     <div class="flex justify-center">
                         <button class="text-blue-600 hover:text-blue-800 transition-colors">
                             <i class="fas fa-search mr-2"></i>Voir la copie complète
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Boîte de partage -->
+                <div class="bg-white rounded-lg p-4 mt-4 shadow-md hover:shadow-lg transition-all duration-300">
+                    <h3 class="text-lg font-semibold mb-3">Partager</h3>
+                    <div class="flex justify-center space-x-4">
+                        <button id="copyUrlButton" class="text-blue-600 hover:text-blue-800 transition-colors">
+                            <i class="fas fa-copy mr-2"></i>Copier l'URL
+                        </button>
+                        <button id="qrCodeButton" class="text-blue-600 hover:text-blue-800 transition-colors">
+                            <i class="fas fa-qrcode mr-2"></i>Voir le QR Code
+                        </button>
+                    </div>
+                    <div id="qrCodeContainer" class="flex justify-center mt-4 hidden">
+                        <img id="qrCodeImage" src="" alt="QR Code">
+                    </div>
+                </div>
+
+                <!-- Boîte d'amélioration -->
+                <div class="bg-white rounded-lg p-4 mt-4 shadow-md hover:shadow-lg transition-all duration-300">
+                    <h3 class="text-lg font-semibold mb-3">Amélioration</h3>
+                    <div class="flex justify-center">
+                        <button onclick="window.location.href='ameliorations.php?id=<?php echo $_GET['id']; ?>'" 
+                                class="text-green-600 hover:text-green-800 transition-colors">
+                            <i class="fas fa-arrow-up mr-2"></i>Comment m'améliorer ?
                         </button>
                     </div>
                 </div>
@@ -509,7 +546,7 @@ try {
                             <i class="fas fa-chevron-down ml-2 transition-transform duration-300"></i>
                         </div>
                         <div class="skill-content">
-                            <div class="p-4">
+                            <div class="p-4" style="text-align: justify;">
                                 <p class="text-gray-700 mb-4"><?php echo nl2br(htmlspecialchars($competence['analyse'])); ?></p>
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div class="bg-green-50 p-4 rounded-lg">
@@ -550,7 +587,7 @@ try {
                 <i class="fas fa-times"></i>
             </button>
             <h2 class="text-2xl font-bold mb-4">Copie complète</h2>
-            <div class="prose max-w-none">
+            <div class="prose max-w-none" style="text-align: justify;">
                 <?php echo nl2br(htmlspecialchars($correction['copie'])); ?>
             </div>
         </div>
@@ -649,6 +686,25 @@ try {
                     });
                 }
             });
+        });
+
+        // Gestion du bouton de copie de l'URL
+        const copyUrlButton = document.getElementById('copyUrlButton');
+        copyUrlButton.addEventListener('click', () => {
+            const url = window.location.href;
+            navigator.clipboard.writeText(url).then(() => {
+                alert('URL copiée dans le presse-papiers');
+            });
+        });
+
+        // Gestion du bouton de QR Code
+        const qrCodeButton = document.getElementById('qrCodeButton');
+        const qrCodeContainer = document.getElementById('qrCodeContainer');
+        const qrCodeImage = document.getElementById('qrCodeImage');
+        qrCodeButton.addEventListener('click', () => {
+            const url = window.location.href;
+            qrCodeImage.src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(url)}`;
+            qrCodeContainer.classList.toggle('hidden');
         });
     </script>
 </body>
