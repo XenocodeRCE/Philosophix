@@ -508,7 +508,7 @@ try {
                         <?php echo substr(htmlspecialchars($correction['copie']), 0, 150) . '...'; ?>
                     </div>
                     <div class="flex justify-center">
-                        <button class="text-blue-600 hover:text-blue-800 transition-colors">
+                        <button class="text-blue-600 hover:text-blue-800 transition-colors" onclick="window.location.href='voir-annotations.php?id=<?php echo $_GET['id']; ?>'">
                             <i class="fas fa-search mr-2"></i>Voir la copie complète
                         </button>
                     </div>
@@ -518,7 +518,7 @@ try {
                 <div id="enonceBox" class="bg-white rounded-lg p-4 cursor-pointer shadow-md hover:shadow-lg transition-all duration-300 mt-4">
                     <h3 class="text-lg font-semibold mb-3">Énoncé du devoir</h3>
                     <div class="text-gray-600 text-sm mb-3">
-                        <?php echo substr(htmlspecialchars($correction['devoir_enonce']), 0, 150) . '...'; ?>
+                        <?php echo substr(htmlspecialchars($correction['devoir_enonce']), 0, 20) . '...'; ?>
                     </div>
                     <div class="flex justify-center">
                         <button class="text-blue-600 hover:text-blue-800 transition-colors">
@@ -543,10 +543,10 @@ try {
                     <h3 class="text-lg font-semibold mb-3">Partager</h3>
                     <div class="flex justify-center space-x-4">
                         <button id="copyUrlButton" class="text-blue-600 hover:text-blue-800 transition-colors">
-                            <i class="fas fa-copy mr-2"></i>Copier l'URL
+                            <i class="fas fa-copy mr-2"></i>URL
                         </button>
                         <button id="qrCodeButton" class="text-blue-600 hover:text-blue-800 transition-colors">
-                            <i class="fas fa-qrcode mr-2"></i>Voir le QR Code
+                            <i class="fas fa-qrcode mr-2"></i>QRCode
                         </button>
                         <button id="printButton" class="text-blue-600 hover:text-blue-800 transition-colors">
                             <i class="fas fa-print mr-2"></i>Imprimer
@@ -626,8 +626,13 @@ try {
                 <i class="fas fa-times"></i>
             </button>
             <h2 class="text-2xl font-bold mb-4">Copie complète</h2>
-            <div class="prose max-w-none" style="text-align: justify;">
-                <?php echo nl2br(htmlspecialchars($correction['copie'])); ?>
+            <div class="flex">
+                <div class="prose max-w-none w-3/4" style="text-align: justify;">
+                    <!-- Texte de la copie sera inséré ici -->
+                </div>
+                <div class="commentaires w-1/4 pl-4">
+                    <!-- Commentaires seront insérés ici -->
+                </div>
             </div>
         </div>
     </div>
@@ -690,8 +695,7 @@ try {
         const closeModal = document.getElementById('closeModal');
 
         previewBox.addEventListener('click', () => {
-            modal.classList.add('active');
-            document.body.style.overflow = 'hidden'; // Empêche le défilement du body
+            window.location.href = 'voir-annotations.php?id=<?php echo $_GET['id']; ?>';
         });
 
         const closeModalFunction = () => {
