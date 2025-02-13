@@ -18,8 +18,9 @@
 ## Fonctionnalités 
 - [x] Créer un devoir (dissert/explication)
 - [x] Générer une correction
+  - [x] Indiquer si l'apprenant à un P.A.P. 
   - [x] Une appréciation générale
-  - [x] Pour chaque compétences (7) :
+  - [x] Pour chaque compétence (7) :
     - [x] Un commentaire
     - [x] Les bons points
     - [x] Les mauvais points
