@@ -1,4 +1,8 @@
 <p align="center">
+  <img src="philosophix-logo.png">
+</p>
+
+<p align="center">
   <img src="intro.gif">
 </p>
 
@@ -12,18 +16,12 @@
 
 
 ## Fonctionnalités 
-
-### Créer un devoir (dissertation / explication)
-![](https://raw.githubusercontent.com/XenocodeRCE/Philosophix/refs/heads/main/autres/presentation_01.gif)
-
-### Évaluer un devoir (+/- 20 secondes)
-![](https://raw.githubusercontent.com/XenocodeRCE/Philosophix/refs/heads/main/autres/presentation_02.gif)
-
-### Lire la correction du devoir en détails
-![](https://raw.githubusercontent.com/XenocodeRCE/Philosophix/refs/heads/main/autres/presentation_05.gif)
-
-### Lire la copie annotée de commentaires et suggestions
-![](https://raw.githubusercontent.com/XenocodeRCE/Philosophix/refs/heads/main/autres/presentation_04.gif)
-
-### Lire des suggestions personnalisées pour s'améliorer
-![](https://raw.githubusercontent.com/XenocodeRCE/Philosophix/refs/heads/main/autres/presentation_03.gif)
+- [x] Créer un devoir (dissert/explication)
+- [x] Générer une correction
+  - [x] Une appréciation générale
+  - [x] Pour chaque compétences (7) :
+    - [x] Un commentaire
+    - [x] Les bons points
+    - [x] Les mauvais points
+- [x] Générer des annotations
+- [x] Générer des suggestions d'améliorations 
