@@ -1,0 +1,15 @@
+C:\Users\Shadow\Documents\GitHub\Philosophix\csharp-cli\bin\Debug\net9.0\csharp-cli.exe
+C:\Users\Shadow\Documents\GitHub\Philosophix\csharp-cli\bin\Debug\net9.0\csharp-cli.deps.json
+C:\Users\Shadow\Documents\GitHub\Philosophix\csharp-cli\bin\Debug\net9.0\csharp-cli.runtimeconfig.json
+C:\Users\Shadow\Documents\GitHub\Philosophix\csharp-cli\bin\Debug\net9.0\csharp-cli.dll
+C:\Users\Shadow\Documents\GitHub\Philosophix\csharp-cli\bin\Debug\net9.0\csharp-cli.pdb
+C:\Users\Shadow\Documents\GitHub\Philosophix\csharp-cli\obj\Debug\net9.0\csharp-cli.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\Shadow\Documents\GitHub\Philosophix\csharp-cli\obj\Debug\net9.0\csharp-cli.AssemblyInfoInputs.cache
+C:\Users\Shadow\Documents\GitHub\Philosophix\csharp-cli\obj\Debug\net9.0\csharp-cli.AssemblyInfo.cs
+C:\Users\Shadow\Documents\GitHub\Philosophix\csharp-cli\obj\Debug\net9.0\csharp-cli.csproj.CoreCompileInputs.cache
+C:\Users\Shadow\Documents\GitHub\Philosophix\csharp-cli\obj\Debug\net9.0\csharp-cli.sourcelink.json
+C:\Users\Shadow\Documents\GitHub\Philosophix\csharp-cli\obj\Debug\net9.0\csharp-cli.dll
+C:\Users\Shadow\Documents\GitHub\Philosophix\csharp-cli\obj\Debug\net9.0\refint\csharp-cli.dll
+C:\Users\Shadow\Documents\GitHub\Philosophix\csharp-cli\obj\Debug\net9.0\csharp-cli.pdb
+C:\Users\Shadow\Documents\GitHub\Philosophix\csharp-cli\obj\Debug\net9.0\csharp-cli.genruntimeconfig.cache
+C:\Users\Shadow\Documents\GitHub\Philosophix\csharp-cli\obj\Debug\net9.0\ref\csharp-cli.dll
