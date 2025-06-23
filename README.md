@@ -216,14 +216,19 @@ Ce projet est une extension de Philosophix. Respecter les conditions d'utilisati
 
 En reprenant [les copies de MrPhi disponibles ici](https://monsieurphi.com/2021/06/13/%e2%9c%8d%ef%b8%8f-bac-philo-comment-vous-notez-%f0%9f%86%9a-comment-notent-les-profs-%f0%9f%91%a9%e2%80%8d%f0%9f%8f%ab%f0%9f%91%a8%e2%80%8d%f0%9f%8f%ab/) voici les résultats :
 
-## Copie A
-
 ![](https://i.imgur.com/HQWsRsG.png)
-
-## Copie B
-
 ![](https://i.imgur.com/xJiS2tX.png)
-
-## Copie C
-
 ![](https://i.imgur.com/XQQ8rjX.png)
+
+
+En utilisant les copies test pour le bac de philo techno 2025 dans l'AC de Grenoble : 
+
+
+📊 **Comparaison des résultats**
+--------------------------------
+
+| Copie | Niveau commission | Note système | Écart | Status |
+| --- | --- | --- | --- | --- |
+| **Dissertation 15-18/20** | 15-18/20 | **16,4/20** | ✅ | Parfait |
+| **Explication 11-13/20** | 11-13/20 | **11,6/20** | ✅ | Parfait |
+| **Explication 9-11/20** | 9-11/20 | **11,6/20** | +0,6 | Très bien |
