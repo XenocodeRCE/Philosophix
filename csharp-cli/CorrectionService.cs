@@ -8,7 +8,19 @@ public class CorrectionService
     private readonly OpenAiService _openAiService;
     private readonly JsonDatabaseService _dbService;
 
-    private readonly string Sévérité = "Degré de sévérité : 3 / 5"; // Degré de sévérité par défaut
+    /// <summary>
+    /// Obtient le niveau de sévérité selon le type de bac
+    /// </summary>
+    private string GetSeverite(string typeBac)
+    {
+        return typeBac switch
+        {
+            "technologique" => "Degré de sévérité : 2 / 5 (Bienveillant pour bac technologique)",
+            "général" => "Degré de sévérité : 3 / 5",
+            _ => "Degré de sévérité : 3 / 5"
+        };
+    }
+
     public CorrectionService(OpenAiService openAiService, JsonDatabaseService dbService)
     {
         _openAiService = openAiService;
@@ -49,10 +61,17 @@ public class CorrectionService
             Console.Write("   Analyse en cours");
 
             var evaluation = await EvaluerCompetenceAsync(competence, copie, devoir.Enonce ?? "", devoir.Type ?? "dissertation", devoir.TypeBac ?? "général", aPAP);
+
+            // Ajuster la note selon le niveau
+            evaluation.Note = (decimal)AjusterNoteSelonNiveau((double)evaluation.Note, devoir.TypeBac ?? "général");
+            
+
             evaluations.Add(evaluation);
 
             Console.WriteLine($" ✅ Note: {evaluation.Note:F1}/20");
-        }        // Évaluation finale
+        }
+
+        // Évaluation finale
         Console.WriteLine("\n🎯 Génération de l'évaluation finale...");
         var evaluationFinale = await EvaluerFinalAsync(evaluations, competences, copie, devoir.Type ?? "dissertation", devoir.TypeBac ?? "général", aPAP);
 
@@ -137,7 +156,7 @@ Répondez UNIQUEMENT au format JSON suivant :
 Évaluez UNIQUEMENT cette compétence, rien d'autre.
 Pour l'analyse, cites des éléments de la copie pour justifier ta note, et addresses-toi à l'élève directement.
 
-{Sévérité}";
+{GetSeverite(TypeBac)}";
 
         var response = await _openAiService.AskGptAsync(system, prompt);
         var evaluation = _openAiService.ParseEvaluationResponse(response);
@@ -191,7 +210,7 @@ Répondez UNIQUEMENT au format JSON suivant :
 }}
 
 Pour l'appreciation addresses-toi à l'élève directement.
-{Sévérité}";
+{GetSeverite(TypeBac)}";
 
         var response = await _openAiService.AskGptAsync(system, prompt);
         return _openAiService.ParseEvaluationFinaleResponse(response);
