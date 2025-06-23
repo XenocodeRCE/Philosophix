@@ -10,6 +10,7 @@ public class OpenAiService
 {
     private readonly HttpClient _httpClient;
     private readonly string _apiKey;
+    public CostCalculator CostTracker { get; private set; }
 
     public OpenAiService()
     {
@@ -17,11 +18,13 @@ public class OpenAiService
         // Mettez ici votre clef API OpenAI
         _apiKey = "sk-"; 
         _httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {_apiKey}");
-    }
-
-    public async Task<string> AskGptAsync(string system, string prompt)
+        CostTracker = new CostCalculator();
+    }    public async Task<string> AskGptAsync(string system, string prompt, string requestType = "Requête")
     {
         var url = "https://api.openai.com/v1/chat/completions";
+
+        // Estimer les tokens d'entrée
+        var inputTokens = CostCalculator.EstimateTokens(system + prompt);
 
         var requestData = new
         {
@@ -46,6 +49,24 @@ public class OpenAiService
         if (response.IsSuccessStatusCode)
         {
             var responseBody = await response.Content.ReadAsStringAsync();
+            
+            // Extraire les informations de tokens de la réponse et calculer le coût
+            try
+            {
+                var apiResponse = JsonSerializer.Deserialize<OpenAiApiResponse>(responseBody);
+                var responseContent = apiResponse?.Choices?[0]?.Message?.Content ?? "";
+                var outputTokens = CostCalculator.EstimateTokens(responseContent);
+                
+                // Ajouter le coût au tracker
+                CostTracker.AddRequest(requestType, inputTokens, outputTokens);
+            }
+            catch
+            {
+                // En cas d'erreur, utiliser les estimations
+                var outputTokens = CostCalculator.EstimateTokens("Erreur de réponse");
+                CostTracker.AddRequest(requestType, inputTokens, outputTokens);
+            }
+            
             return responseBody;
         }
         else

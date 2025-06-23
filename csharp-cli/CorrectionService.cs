@@ -58,9 +58,7 @@ public class CorrectionService
             var competence = competences[i];
             Console.WriteLine($"\n📋 Évaluation de la compétence {i + 1}/{competences.Count}:");
             Console.WriteLine($"   {competence.Nom}");
-            Console.Write("   Analyse en cours");
-
-            var evaluation = await EvaluerCompetenceAsync(competence, copie, devoir.Enonce ?? "", devoir.Type ?? "dissertation", devoir.TypeBac ?? "général", aPAP);
+            Console.Write("   Analyse en cours");            var evaluation = await EvaluerCompetenceAsync(competence, copie, devoir.Enonce ?? "", devoir.Type ?? "dissertation", devoir.TypeBac ?? "général", aPAP);
 
             // Ajuster la note selon le niveau
             evaluation.Note = (decimal)AjusterNoteSelonNiveau((double)evaluation.Note, devoir.TypeBac ?? "général");
@@ -74,6 +72,10 @@ public class CorrectionService
         // Évaluation finale
         Console.WriteLine("\n🎯 Génération de l'évaluation finale...");
         var evaluationFinale = await EvaluerFinalAsync(evaluations, competences, copie, devoir.Type ?? "dissertation", devoir.TypeBac ?? "général", aPAP);
+
+        // Afficher le résumé des coûts
+        Console.WriteLine("\n" + new string('─', 60));
+        _openAiService.CostTracker.DisplayCostSummary();
 
         // Calcul de la note moyenne
         var notesAjustees = evaluations.Select(e => AjusterNoteSelonNiveau(Convert.ToDouble(e.Note), devoir.TypeBac ?? "général")).ToList();
@@ -158,7 +160,7 @@ Pour l'analyse, cites des éléments de la copie pour justifier ta note, et addr
 
 {GetSeverite(TypeBac)}";
 
-        var response = await _openAiService.AskGptAsync(system, prompt);
+        var response = await _openAiService.AskGptAsync(system, prompt, $"Compétence: {competence.Nom}");
         var evaluation = _openAiService.ParseEvaluationResponse(response);
         
         // Ajouter le nom de la compétence à l'évaluation
@@ -212,7 +214,7 @@ Répondez UNIQUEMENT au format JSON suivant :
 Pour l'appreciation addresses-toi à l'élève directement.
 {GetSeverite(TypeBac)}";
 
-        var response = await _openAiService.AskGptAsync(system, prompt);
+        var response = await _openAiService.AskGptAsync(system, prompt, "Évaluation finale");
         return _openAiService.ParseEvaluationFinaleResponse(response);
     }
 

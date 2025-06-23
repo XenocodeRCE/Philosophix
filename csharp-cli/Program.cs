@@ -19,12 +19,12 @@ class Program
             Console.WriteLine("║              Philosophix CLI v2.0              ║");
             Console.WriteLine("║        Correction automatisée de copies       ║");
             Console.WriteLine("╚════════════════════════════════════════════════╝");
-            Console.WriteLine();
-            Console.WriteLine("1. Créer un devoir");
+            Console.WriteLine();            Console.WriteLine("1. Créer un devoir");
             Console.WriteLine("2. Voir les devoirs");
             Console.WriteLine("3. Corriger une copie");
             Console.WriteLine("4. Voir les corrections");
-            Console.WriteLine("5. Quitter");
+            Console.WriteLine("5. Réinitialiser le compteur de coûts");
+            Console.WriteLine("6. Quitter");
             Console.WriteLine();
             Console.Write("Votre choix : ");
 
@@ -45,14 +45,15 @@ class Program
                     await VoirCorrectionsAsync(dbService);
                     break;
                 case "5":
+                    openAiService.CostTracker.Reset();
+                    break;
+                case "6":
                     Console.WriteLine("Au revoir !");
                     return;
                 default:
                     Console.WriteLine("Choix invalide.");
                     break;
-            }
-
-            if (choix != "5")
+            }            if (choix != "6")
             {
                 Console.WriteLine("\nAppuyez sur une touche pour continuer...");
                 Console.ReadKey();
