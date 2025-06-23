@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Text;
 
 public class CorrectionService
 {
@@ -14,17 +15,17 @@ public class CorrectionService
     private string GetSeverite(string typeBac)
     {
         return typeBac switch
-    {
-        "technologique" => @"INSTRUCTIONS DE NOTATION pour BAC TECHNOLOGIQUE :
+        {
+            "technologique" => @"INSTRUCTIONS DE NOTATION pour BAC TECHNOLOGIQUE :
 - Cette copie doit être évaluée selon les standards réels du bac technologique
 - Ne donnez PAS la même note à toutes les compétences
 - Soyez différencié : certaines compétences peuvent avoir 8-9/20, d'autres 11-13/20
 - N'hésitez pas à donner des notes en dessous de 10/20 si la compétence est insuffisante
 - Basez-vous sur l'échelle : 6-9 = insuffisant, 10-11 = correct, 12-14 = bien, 15+ = très bien",
-        
-        "général" => "Degré de sévérité : 3 / 5",
-        _ => "Degré de sévérité : 3 / 5"
-    };
+
+            "général" => "Degré de sévérité : 3 / 5",
+            _ => "Degré de sévérité : 3 / 5"
+        };
     }
 
     public CorrectionService(OpenAiService openAiService, JsonDatabaseService dbService)
@@ -32,8 +33,8 @@ public class CorrectionService
         _openAiService = openAiService;
         _dbService = dbService;
     }    /// <summary>
-    /// Lance le processus complet de correction d'une copie
-    /// </summary>
+         /// Lance le processus complet de correction d'une copie
+         /// </summary>
     public async Task<Correction> CorrigerCopieAsync(Devoir devoir, string copie, bool aPAP = false)
     {
         Console.WriteLine("\n" + new string('═', 60));
@@ -41,7 +42,7 @@ public class CorrectionService
         Console.WriteLine(new string('═', 60));
 
         var competences = devoir.Bareme?.Competences ?? new List<Competence>();
-          // Filtrer les compétences si PAP (exclure la compétence "Maîtrise de la langue française" ou "Expression et rédaction")
+        // Filtrer les compétences si PAP (exclure la compétence "Maîtrise de la langue française" ou "Expression et rédaction")
         if (aPAP)
         {
             Console.WriteLine("ℹ️  PAP activé : Les compétences d'expression ne seront pas évaluées.");
@@ -56,7 +57,7 @@ public class CorrectionService
                 competences = competences.Where(c => c.Nom != "Maîtrise de la langue française").ToList();
             }
         }
-        
+
         var evaluations = new List<EvaluationCompetence>();
 
         // Évaluation par compétence
@@ -82,9 +83,9 @@ public class CorrectionService
 
         // Calcul de la note moyenne
         var notesAjustees = evaluations.Select(e => AjusterNoteSelonNiveau(Convert.ToDouble(e.Note), devoir.TypeBac ?? "général")).ToList();
-        
 
-         // Calcul de la note moyenne avec pondération intelligente
+
+        // Calcul de la note moyenne avec pondération intelligente
         var notesFinales = evaluations.Select(e => e.Note).ToList();
         var notesFinalesDouble = notesFinales.Select(n => Convert.ToDouble(n)).ToList();
         var noteMoyenne = AppliquerPonderation(notesFinalesDouble, devoir.TypeBac ?? "général", evaluations);
@@ -92,10 +93,10 @@ public class CorrectionService
         // Afficher les détails pour le bac technologique
         if (devoir.TypeBac == "technologique")
         {
-             var noteSansAjustement = evaluations.Average(e => e.Note);
+            var noteSansAjustement = evaluations.Average(e => e.Note);
             Console.WriteLine($"📊 Note moyenne des compétences : {noteSansAjustement:F1}/20");
             Console.WriteLine($"📊 Note finale après pondération bac techno : {noteMoyenne:F1}/20");
-            
+
             // Debug : afficher quelques extraits d'analyse pour vérification
             Console.WriteLine("🔍 Extraits d'analyses pour vérification :");
             foreach (var eval in evaluations.Take(2))
@@ -127,17 +128,18 @@ public class CorrectionService
 
         return correction;
     }    /// <summary>
-    /// Évalue une compétence spécifique
-    /// </summary>
-    private async Task<EvaluationCompetence> EvaluerCompetenceAsync(Competence competence, string copie, string enonce, string typeDevoir, string TypeBac, bool aPAP = false)    {
+         /// Évalue une compétence spécifique
+         /// </summary>
+    private async Task<EvaluationCompetence> EvaluerCompetenceAsync(Competence competence, string copie, string enonce, string typeDevoir, string TypeBac, bool aPAP = false)
+    {
         var system = $@"Vous êtes un correcteur de philosophie qui évalue selon les standards RÉELS du bac {TypeBac}.
         
         ATTENTION : Cette copie doit être notée de manière DIFFÉRENCIÉE et RÉALISTE.
 - Ne donnez PAS la même note à toutes les compétences
 - Utilisez toute l'échelle de notation : 6-20/20";
-        
+
         var messagePAP = aPAP ? "\n\nIMPORTANT : Cet élève dispose d'un PAP (Plan d'Accompagnement Personnalisé). Ne tenez pas compte de la qualité de l'orthographe, de la grammaire ou de l'expression écrite dans votre évaluation. Concentrez-vous uniquement sur le contenu philosophique et la réflexion." : "";
-        
+
         // Adapter le message selon le type de bac
         string messageNiveau = "";
         if (TypeBac == "technologique")
@@ -145,7 +147,7 @@ public class CorrectionService
             messageNiveau = "\n📊 NIVEAU : Bac technologique - Adaptez vos attentes au niveau et soyez bienveillant sur les imperfections mineures de forme. Privilégiez la compréhension et les idées.";
         }
 
-var prompt = $@"Évaluez la compétence ""{competence.Nom}"" .
+        var prompt = $@"Évaluez la compétence ""{competence.Nom}"" .
 
 **COMPÉTENCE À ÉVALUER :** 
 {competence.Nom}
@@ -181,17 +183,18 @@ Pour l'analyse, cites des éléments de la copie pour justifier ta note, et addr
 
         var response = await _openAiService.AskGptAsync(system, prompt, $"Compétence: {competence.Nom}");
         var evaluation = _openAiService.ParseEvaluationResponse(response);
-        
+
         // Ajouter le nom de la compétence à l'évaluation
         evaluation.Nom = competence.Nom;
-        
+
         return evaluation;
     }    /// <summary>
-    /// Génère l'évaluation finale globale
-    /// </summary>
-    private async Task<EvaluationFinaleApiResponse> EvaluerFinalAsync(List<EvaluationCompetence> evaluations, List<Competence> competences, string copie, string typeDevoir, string TypeBac, bool aPAP = false)    {
+         /// Génère l'évaluation finale globale
+         /// </summary>
+    private async Task<EvaluationFinaleApiResponse> EvaluerFinalAsync(List<EvaluationCompetence> evaluations, List<Competence> competences, string copie, string typeDevoir, string TypeBac, bool aPAP = false)
+    {
         var system = "Vous êtes un professeur de philosophie expérimenté qui corrige des rédactions.";
-        
+
         var echelleNotation = GetEchelleNotation(typeDevoir);
         var messagePAP = aPAP ? "\n\nIMPORTANT : Cet élève dispose d'un PAP (Plan d'Accompagnement Personnalisé). Dans votre appréciation générale, ne tenez pas compte de la qualité de l'orthographe, de la grammaire ou de l'expression écrite. Concentrez-vous uniquement sur le contenu philosophique et la réflexion." : "";
 
@@ -201,8 +204,8 @@ Pour l'analyse, cites des éléments de la copie pour justifier ta note, et addr
             messageNiveau = "\n📊 NIVEAU : Bac technologique - Adaptez vos attentes au niveau et soyez bienveillant sur les imperfections mineures de forme. Privilégiez la compréhension et les idées.";
         }
 
-        
-        var evaluationsText = string.Join("\n", evaluations.Zip(competences, (eval, comp) => 
+
+        var evaluationsText = string.Join("\n", evaluations.Zip(competences, (eval, comp) =>
             $"{comp.Nom}: {eval.Note}/20 - {eval.Analyse}"));
 
         var prompt = $@"Type de devoir : {typeDevoir}
@@ -289,7 +292,7 @@ Pour l'appreciation addresses-toi à l'élève directement.
             _ => note
         };
     }
-    
+
 
     /// <summary>
     /// Détecte la qualité globale d'une copie basée sur les évaluations textuelles
@@ -297,7 +300,7 @@ Pour l'appreciation addresses-toi à l'élève directement.
     private string DetecterQualiteCopie(List<EvaluationCompetence> evaluations)
     {
         // Mots-clés pour copie de BONNE qualité
-        var motsClesBons = new[] { 
+        var motsClesBons = new[] {
             "pertinente", "pertinent", "solide", "structuré", "structurée", "claire", "clair", "clairement",
             "bon", "bonne", "réussi", "efficace", "approprié", "appropriée", "cohérent", "cohérente",
             "intéressant", "intéressante", "satisfaisant", "satisfaisante", "correct", "correcte",
@@ -307,12 +310,12 @@ Pour l'appreciation addresses-toi à l'élève directement.
             "analyse", "synthèse", "articulation", "engagement", "effort", "capacité", "enrichit",
             "enrichissant", "montre", "témoigne", "démontre", "réussi à", "parvenez", "identifié"
         };
-        
+
         // Mots-clés pour copie VRAIMENT faible (très restrictifs)
-        var motsClesFaibles = new[] { 
+        var motsClesFaibles = new[] {
             "très insuffisant", "insuffisant", "extrêmement faible", "grave lacune",
             "incompréhensible", "incohérent totalement", "absent totalement", "inexistant",
-            "catastrophique", "désorganisé complètement", "inintelligible", 
+            "catastrophique", "désorganisé complètement", "inintelligible",
             "hors sujet", "sans rapport avec", "refuse de faire", "très faible"
         };
 
@@ -333,18 +336,18 @@ Pour l'appreciation addresses-toi à l'élève directement.
             var analyseTexte = eval.Analyse?.ToLower() ?? "";
             var pointsForts = string.Join(" ", eval.PointsForts?.Select(p => p.ToLower()) ?? new List<string>());
             var pointsAmeliorer = string.Join(" ", eval.PointsAmeliorer?.Select(p => p.ToLower()) ?? new List<string>());
-            
+
             var texteComplet = $"{analyseTexte} {pointsForts}";
             var mots = texteComplet.Split(' ', StringSplitOptions.RemoveEmptyEntries);
             totalMots += mots.Length;
-            
+
             // Compter les occurrences
             foreach (var mot in motsClesBons)
             {
                 var matches = System.Text.RegularExpressions.Regex.Matches(texteComplet, $@"\b{mot}\b");
                 scoreBon += matches.Count;
             }
-            
+
             foreach (var mot in motsClesFaibles)
             {
                 var matches = System.Text.RegularExpressions.Regex.Matches(texteComplet, $@"\b{mot}\b");
@@ -373,7 +376,7 @@ Pour l'appreciation addresses-toi à l'élève directement.
         // NOUVELLE LOGIQUE CORRIGÉE
         // Une copie est bonne si elle a beaucoup de points positifs ET peu de vrais défauts
         // Une copie est faible si elle a beaucoup de vrais défauts ET peu de points positifs
-        
+
         if (moyenneNotes >= 13 && densiteBon >= 3.5 && densiteFaible <= 1.5)
         {
             return "bonne";
@@ -400,10 +403,10 @@ Pour l'appreciation addresses-toi à l'élève directement.
         var moyenne = notes.Average();
         var ecartType = CalculerEcartType(notes);
         var qualiteCopie = DetecterQualiteCopie(evaluations);
-        
+
         Console.WriteLine($"📊 Qualité détectée : {qualiteCopie}");
         Console.WriteLine($"📊 Écart-type des notes : {ecartType:F2}");
-        
+
         if (typeBac == "technologique")
         {
             switch (qualiteCopie)
@@ -426,27 +429,27 @@ Pour l'appreciation addresses-toi à l'élève directement.
                         Console.WriteLine("✅ Ajustement positif léger pour copie déjà bien notée");
                     }
                     break;
-                    
+
                 case "faible":
                     // Copie vraiment faible : réduction
                     moyenne = moyenne * 0.80; // -20%
                     Console.WriteLine("📉 Ajustement négatif pour copie faible");
                     break;
-                    
+
                 default: // moyenne
                     // Copie moyenne : ajustement neutre
                     moyenne = moyenne * 1.02; // +2% (bienveillance bac techno)
                     Console.WriteLine("🔄 Ajustement neutre bienveillant pour copie moyenne");
                     break;
             }
-            
+
             // Contraintes finales
             moyenne = Math.Max(moyenne, 6.0);  // Minimum 6/20
             moyenne = Math.Min(moyenne, 18.5); // Maximum 18.5/20
-            
+
             return Math.Round(moyenne, 1);
         }
-        
+
         return Math.Round(moyenne, 1);
 
     }
@@ -457,7 +460,7 @@ Pour l'appreciation addresses-toi à l'élève directement.
     private double CalculerEcartType(List<double> notes)
     {
         if (notes.Count <= 1) return 0;
-    
+
         var moyenne = notes.Average();
         var variance = notes.Sum(x => Math.Pow(x - moyenne, 2)) / notes.Count;
         return Math.Sqrt(variance);
@@ -480,10 +483,10 @@ Pour l'appreciation addresses-toi à l'élève directement.
         Console.WriteLine("╔══════════════════════════════════════════════════════╗");
         Console.WriteLine("║                RÉSULTATS DE CORRECTION               ║");
         Console.WriteLine("╚══════════════════════════════════════════════════════╝");
-        
+
         Console.WriteLine($"\n🎯 NOTE FINALE : {correction.Note:F1}/20");
         Console.WriteLine($"📅 Date de correction : {correction.DateCorrection:dd/MM/yyyy HH:mm}");
-        
+
         Console.WriteLine("\n" + new string('═', 60));
         Console.WriteLine("💬 APPRÉCIATION GÉNÉRALE");
         Console.WriteLine(new string('═', 60));
@@ -514,7 +517,7 @@ Pour l'appreciation addresses-toi à l'élève directement.
         Console.WriteLine("\n" + new string('═', 60));
         Console.WriteLine("📊 DÉTAIL PAR COMPÉTENCE");
         Console.WriteLine(new string('═', 60));
-        
+
         if (correction.Competences != null)
         {
             for (int i = 0; i < correction.Competences.Count; i++)
@@ -522,7 +525,7 @@ Pour l'appreciation addresses-toi à l'élève directement.
                 var eval = correction.Competences[i];
                 Console.WriteLine($"\n{i + 1}. {eval.Nom} - {eval.Note:F1}/20");
                 Console.WriteLine($"   {eval.Analyse}");
-                
+
                 if (eval.PointsForts?.Count > 0)
                 {
                     Console.WriteLine("   ✅ Points forts :");
@@ -531,7 +534,7 @@ Pour l'appreciation addresses-toi à l'élève directement.
                         Console.WriteLine($"      • {point}");
                     }
                 }
-                
+
                 if (eval.PointsAmeliorer?.Count > 0)
                 {
                     Console.WriteLine("   📈 À améliorer :");
@@ -545,4 +548,154 @@ Pour l'appreciation addresses-toi à l'élève directement.
 
         Console.WriteLine($"\n✅ Correction sauvegardée avec l'ID : {correction.Id}");
     }
+
+    /// <summary>
+    /// Exporte une correction vers un fichier .txt bien formaté
+    /// </summary>
+    public static async Task<string> ExporterCorrectionAsync(Correction correction, Devoir devoir, string cheminDossier = "")
+    {
+        // Toujours utiliser le dossier en cours
+        var dossierExport = Environment.CurrentDirectory;
+
+        // Créer le nom du fichier
+        var dateCorrection = correction.DateCorrection.ToString("yyyy-MM-dd_HH-mm");
+        var sujetCourt = devoir.Titre?.Replace(" ", "_").Replace("?", "").Replace(":", "").Replace("/", "_") ?? "Sujet";
+        var nomFichier = $"Correction_{sujetCourt}_{dateCorrection}.txt";
+
+        // Chemin complet
+        var cheminComplet = Path.Combine(dossierExport, "Exports", nomFichier);
+
+        // Créer le dossier s'il n'existe pas
+        Directory.CreateDirectory(Path.GetDirectoryName(cheminComplet)!);
+
+        var contenu = new StringBuilder();
+
+        // En-tête
+        contenu.AppendLine("╔══════════════════════════════════════════════════════════════════════════════╗");
+        contenu.AppendLine("║                           CORRECTION DE COPIE                               ║");
+        contenu.AppendLine("║                             PHILOSOPHIX                                     ║");
+        contenu.AppendLine("╚══════════════════════════════════════════════════════════════════════════════╝");
+        contenu.AppendLine();
+
+        // Informations générales
+        contenu.AppendLine("═══════════════════════════════════════════════════════════════════════════════");
+        contenu.AppendLine("📋 INFORMATIONS GÉNÉRALES");
+        contenu.AppendLine("═══════════════════════════════════════════════════════════════════════════════");
+        contenu.AppendLine($"📅 Date de correction : {correction.DateCorrection:dd/MM/yyyy à HH:mm}");
+        contenu.AppendLine($"📝 Sujet : {devoir.Titre}");
+        contenu.AppendLine($"📖 Énoncé : {devoir.Enonce}");
+        contenu.AppendLine($"🎯 Type de devoir : {devoir.Type}");
+        contenu.AppendLine($"🎓 Type de bac : {devoir.TypeBac}");
+        contenu.AppendLine($"🏆 NOTE FINALE : {correction.Note:F1}/20");
+        contenu.AppendLine();
+
+        // Appréciation générale
+        contenu.AppendLine("═══════════════════════════════════════════════════════════════════════════════");
+        contenu.AppendLine("💬 APPRÉCIATION GÉNÉRALE");
+        contenu.AppendLine("═══════════════════════════════════════════════════════════════════════════════");
+        contenu.AppendLine(correction.Appreciation);
+        contenu.AppendLine();
+
+        // Points forts
+        contenu.AppendLine("───────────────────────────────────────────────────────────────────────────────");
+        contenu.AppendLine("✅ POINTS FORTS");
+        contenu.AppendLine("───────────────────────────────────────────────────────────────────────────────");
+        if (correction.PointsForts != null && correction.PointsForts.Count > 0)
+        {
+            foreach (var point in correction.PointsForts)
+            {
+                contenu.AppendLine($"• {point}");
+            }
+        }
+        else
+        {
+            contenu.AppendLine("Aucun point fort spécifique identifié.");
+        }
+        contenu.AppendLine();
+
+        // Points à améliorer
+        contenu.AppendLine("───────────────────────────────────────────────────────────────────────────────");
+        contenu.AppendLine("📈 POINTS À AMÉLIORER");
+        contenu.AppendLine("───────────────────────────────────────────────────────────────────────────────");
+        if (correction.PointsAmeliorer != null && correction.PointsAmeliorer.Count > 0)
+        {
+            foreach (var point in correction.PointsAmeliorer)
+            {
+                contenu.AppendLine($"• {point}");
+            }
+        }
+        else
+        {
+            contenu.AppendLine("Aucun point d'amélioration spécifique identifié.");
+        }
+        contenu.AppendLine();
+
+        // Détail par compétence
+        contenu.AppendLine("═══════════════════════════════════════════════════════════════════════════════");
+        contenu.AppendLine("📊 ÉVALUATION DÉTAILLÉE PAR COMPÉTENCE");
+        contenu.AppendLine("═══════════════════════════════════════════════════════════════════════════════");
+
+        if (correction.Competences != null && correction.Competences.Count > 0)
+        {
+            for (int i = 0; i < correction.Competences.Count; i++)
+            {
+                var eval = correction.Competences[i];
+
+                contenu.AppendLine($"\n{i + 1}. {eval.Nom.ToUpper()}");
+                contenu.AppendLine($"   Note : {eval.Note:F1}/20");
+                contenu.AppendLine("   " + new string('─', 75));
+
+                // Analyse détaillée
+                contenu.AppendLine("   📝 Analyse :");
+                var lignesAnalyse = eval.Analyse?.Split('\n') ?? new[] { "Aucune analyse disponible." };
+                foreach (var ligne in lignesAnalyse)
+                {
+                    contenu.AppendLine($"   {ligne}");
+                }
+                contenu.AppendLine();
+
+                // Points forts de la compétence
+                if (eval.PointsForts?.Count > 0)
+                {
+                    contenu.AppendLine("   ✅ Points forts :");
+                    foreach (var point in eval.PointsForts)
+                    {
+                        contenu.AppendLine($"      • {point}");
+                    }
+                    contenu.AppendLine();
+                }
+
+                // Points à améliorer de la compétence
+                if (eval.PointsAmeliorer?.Count > 0)
+                {
+                    contenu.AppendLine("   📈 À améliorer :");
+                    foreach (var point in eval.PointsAmeliorer)
+                    {
+                        contenu.AppendLine($"      • {point}");
+                    }
+                    contenu.AppendLine();
+                }
+            }
+        }
+
+        // Copie de l'élève
+        contenu.AppendLine("═══════════════════════════════════════════════════════════════════════════════");
+        contenu.AppendLine("📄 COPIE DE L'ÉLÈVE");
+        contenu.AppendLine("═══════════════════════════════════════════════════════════════════════════════");
+        contenu.AppendLine(correction.Copie);
+        contenu.AppendLine();
+
+        // Pied de page
+        contenu.AppendLine("═══════════════════════════════════════════════════════════════════════════════");
+        contenu.AppendLine($"Correction générée par Philosophix le {DateTime.Now:dd/MM/yyyy à HH:mm}");
+        contenu.AppendLine("═══════════════════════════════════════════════════════════════════════════════");
+
+        // Écrire le fichier
+        await File.WriteAllTextAsync(cheminComplet, contenu.ToString(), Encoding.UTF8);
+
+        return cheminComplet;
+    }
+    
+
+
 }

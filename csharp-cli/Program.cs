@@ -17,7 +17,7 @@ class Program
             //Console.Clear();
             Console.WriteLine("╔════════════════════════════════════════════════╗");
             Console.WriteLine("║              Philosophix CLI v2.0              ║");
-            Console.WriteLine("║        Correction automatisée de copies       ║");
+            Console.WriteLine("║        Correction automatisée de copies        ║");
             Console.WriteLine("╚════════════════════════════════════════════════╝");
             Console.WriteLine();            Console.WriteLine("1. Créer un devoir");
             Console.WriteLine("2. Voir les devoirs");
@@ -199,10 +199,10 @@ class Program
         Console.WriteLine("\n" + new string('─', 60));
         Console.WriteLine("INFORMATIONS SUR L'ÉLÈVE");
         Console.WriteLine(new string('─', 60));
-        Console.Write("L'élève dispose-t-il d'un PAP (Plan d'Accompagnement Personnalisé) ? (o/n) : ");
-        var reponsePAP = Console.ReadLine()?.ToLower();
-        bool aPAP = reponsePAP == "o" || reponsePAP == "oui";
-        
+        Console.Write("L'élève dispose-t-il d'un PAP (Plan d'Accompagnement Personnalisé) ? (1 = Oui, 2 = Non) : ");
+        var reponsePAP = Console.ReadLine();
+        bool aPAP = reponsePAP == "1";
+
         if (aPAP)
         {
             Console.WriteLine("ℹ️  PAP détecté : La qualité de l'expression ne sera pas évaluée.");
@@ -259,11 +259,13 @@ class Program
         {
             var correction = await correctionService.CorrigerCopieAsync(devoirSelectionne, copie, aPAP);
             CorrectionService.AfficherResultatsCorrection(correction, devoirSelectionne.Bareme?.Competences ?? new List<Competence>());
+            CorrectionService.ExporterCorrectionAsync(correction, devoirSelectionne).Wait();
         }
         catch (Exception ex)
         {
             Console.WriteLine($"\n❌ Erreur lors de la correction : {ex.Message}");
-        }}
+        }
+    }
 
     static async Task VoirCorrectionsAsync(JsonDatabaseService dbService)
     {
