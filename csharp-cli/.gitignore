@@ -1,0 +1,29 @@
+# Fichiers de configuration avec clés API
+appsettings.json
+
+# Fichiers de build
+bin/
+obj/
+*.dll
+*.exe
+*.pdb
+
+# Fichiers temporaires
+*.tmp
+*.log
+
+# Fichiers de données locales
+devoirs.json
+devoirs_corrections.json
+*.txt
+
+# Fichiers VS Code
+.vscode/
+.vs/
+
+# Fichiers de cache
+*.cache
+
+# Autres
+.DS_Store
+Thumbs.db

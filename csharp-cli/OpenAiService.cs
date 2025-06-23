@@ -5,37 +5,74 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using System.Collections.Generic;
+using System.IO;
 
 public class OpenAiService
 {
     private readonly HttpClient _httpClient;
     private readonly string _apiKey;
+    private readonly string _model;
+    private readonly int _maxTokens;
+    private readonly double _temperature;
     public CostCalculator CostTracker { get; private set; }
 
     public OpenAiService()
     {
         _httpClient = new HttpClient();
-        // Mettez ici votre clef API OpenAI
-        _apiKey = "sk-"; 
+        
+        // Lire la configuration depuis appsettings.json
+        var config = LoadConfiguration();
+        _apiKey = config.OpenAI.ApiKey;
+        _model = config.OpenAI.Model;
+        _maxTokens = config.OpenAI.MaxTokens;
+        _temperature = config.OpenAI.Temperature;
+        
+        if (string.IsNullOrEmpty(_apiKey) || _apiKey == "sk-")
+        {
+            throw new InvalidOperationException("Clé API OpenAI non configurée dans appsettings.json");
+        }
+        
         _httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {_apiKey}");
         CostTracker = new CostCalculator();
-    }    public async Task<string> AskGptAsync(string system, string prompt, string requestType = "Requête")
+    }
+
+    private AppSettings LoadConfiguration()
+    {
+        try
+        {
+            var configPath = "appsettings.json";
+            if (!File.Exists(configPath))
+            {
+                throw new FileNotFoundException($"Le fichier {configPath} est introuvable.");
+            }
+
+            var jsonContent = File.ReadAllText(configPath);
+            var config = JsonSerializer.Deserialize<AppSettings>(jsonContent, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+
+            return config ?? throw new InvalidOperationException("Impossible de désérialiser la configuration.");
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException($"Erreur lors du chargement de la configuration : {ex.Message}");
+        }
+    }public async Task<string> AskGptAsync(string system, string prompt, string requestType = "Requête")
     {
         var url = "https://api.openai.com/v1/chat/completions";
 
         // Estimer les tokens d'entrée
-        var inputTokens = CostCalculator.EstimateTokens(system + prompt);
-
-        var requestData = new
+        var inputTokens = CostCalculator.EstimateTokens(system + prompt);        var requestData = new
         {
             messages = new[]
             {
                 new { role = "system", content = system },
                 new { role = "user", content = prompt }
             },
-            model = "gpt-4o-mini",
-            temperature = 1,
-            max_tokens = 8000,
+            model = _model,
+            temperature = _temperature,
+            max_tokens = _maxTokens,
             top_p = 1,
             stream = false,
             stop = (string?)null
@@ -179,4 +216,32 @@ public class Message
 {
     [JsonPropertyName("content")]
     public string? Content { get; set; }
+}
+
+// Classes pour la configuration appsettings.json
+public class AppSettings
+{
+    public OpenAISettings OpenAI { get; set; } = new();
+    public DatabaseSettings Database { get; set; } = new();
+    public CorrectionSettings Correction { get; set; } = new();
+}
+
+public class OpenAISettings
+{
+    public string ApiKey { get; set; } = "";
+    public string Model { get; set; } = "gpt-4o-mini";
+    public int MaxTokens { get; set; } = 8000;
+    public double Temperature { get; set; } = 1.0;
+}
+
+public class DatabaseSettings
+{
+    public string DevoirsPath { get; set; } = "devoirs.json";
+    public string CorrectionsPath { get; set; } = "devoirs_corrections.json";
+}
+
+public class CorrectionSettings
+{
+    public int MinimumCopyLength { get; set; } = 500;
+    public int SeverityLevel { get; set; } = 3;
 }

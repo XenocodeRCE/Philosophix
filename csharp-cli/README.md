@@ -45,9 +45,18 @@ Version en ligne de commande (CLI) de Philosophix - un système de correction au
 ### Configuration
 1. Cloner le repository
 2. Naviguer vers le dossier `csharp-cli`
-3. Modifier `OpenAiService.cs` ligne 16 pour ajouter votre clé API OpenAI :
-   ```csharp
-   _apiKey = "sk-votre-clé-api-ici";
+3. Copier `appsettings.example.json` vers `appsettings.json`
+4. Modifier `appsettings.json` pour ajouter votre clé API OpenAI :
+   ```json
+   {
+     "OpenAI": {
+       "ApiKey": "sk-votre-clé-api-ici",
+       "Model": "gpt-4o-mini",
+       "MaxTokens": 8000,
+       "Temperature": 1.0
+     }
+   }
+   ```
    ```
 
 ### Compilation
@@ -189,3 +198,15 @@ Pour toute question ou problème :
 ## Licence
 
 Ce projet est une extension de Philosophix. Respecter les conditions d'utilisation de l'API OpenAI.
+
+## 🔐 Sécurité et Configuration
+
+### Configuration des clés API
+- Le fichier `appsettings.json` contient votre clé API et est exclu de Git
+- Utilisez `appsettings.example.json` comme template
+- **Ne jamais commiter votre vraie clé API**
+
+### Calcul des coûts
+- Suivi automatique des coûts d'utilisation de l'API OpenAI
+- Affichage du coût par requête et total par correction
+- Option de réinitialisation du compteur
