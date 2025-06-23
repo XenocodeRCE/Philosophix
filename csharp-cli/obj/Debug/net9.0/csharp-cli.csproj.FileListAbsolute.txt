@@ -13,3 +13,4 @@ C:\Users\Shadow\Documents\GitHub\Philosophix\csharp-cli\obj\Debug\net9.0\refint\
 C:\Users\Shadow\Documents\GitHub\Philosophix\csharp-cli\obj\Debug\net9.0\csharp-cli.pdb
 C:\Users\Shadow\Documents\GitHub\Philosophix\csharp-cli\obj\Debug\net9.0\csharp-cli.genruntimeconfig.cache
 C:\Users\Shadow\Documents\GitHub\Philosophix\csharp-cli\obj\Debug\net9.0\ref\csharp-cli.dll
+C:\Users\Shadow\Documents\GitHub\Philosophix\csharp-cli\bin\Debug\net9.0\appsettings.json

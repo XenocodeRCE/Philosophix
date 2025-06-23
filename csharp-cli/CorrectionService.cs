@@ -14,11 +14,17 @@ public class CorrectionService
     private string GetSeverite(string typeBac)
     {
         return typeBac switch
-        {
-            "technologique" => "Degré de sévérité : 2 / 5 (Bienveillant pour bac technologique)",
-            "général" => "Degré de sévérité : 3 / 5",
-            _ => "Degré de sévérité : 3 / 5"
-        };
+    {
+        "technologique" => @"INSTRUCTIONS DE NOTATION pour BAC TECHNOLOGIQUE :
+- Cette copie doit être évaluée selon les standards réels du bac technologique
+- Ne donnez PAS la même note à toutes les compétences
+- Soyez différencié : certaines compétences peuvent avoir 8-9/20, d'autres 11-13/20
+- N'hésitez pas à donner des notes en dessous de 10/20 si la compétence est insuffisante
+- Basez-vous sur l'échelle : 6-9 = insuffisant, 10-11 = correct, 12-14 = bien, 15+ = très bien",
+        
+        "général" => "Degré de sévérité : 3 / 5",
+        _ => "Degré de sévérité : 3 / 5"
+    };
     }
 
     public CorrectionService(OpenAiService openAiService, JsonDatabaseService dbService)
@@ -29,7 +35,8 @@ public class CorrectionService
     /// Lance le processus complet de correction d'une copie
     /// </summary>
     public async Task<Correction> CorrigerCopieAsync(Devoir devoir, string copie, bool aPAP = false)
-    {        Console.WriteLine("\n" + new string('═', 60));
+    {
+        Console.WriteLine("\n" + new string('═', 60));
         Console.WriteLine("🤖 CORRECTION EN COURS...");
         Console.WriteLine(new string('═', 60));
 
@@ -58,14 +65,10 @@ public class CorrectionService
             var competence = competences[i];
             Console.WriteLine($"\n📋 Évaluation de la compétence {i + 1}/{competences.Count}:");
             Console.WriteLine($"   {competence.Nom}");
-            Console.Write("   Analyse en cours");            var evaluation = await EvaluerCompetenceAsync(competence, copie, devoir.Enonce ?? "", devoir.Type ?? "dissertation", devoir.TypeBac ?? "général", aPAP);
-
-            // Ajuster la note selon le niveau
-            evaluation.Note = (decimal)AjusterNoteSelonNiveau((double)evaluation.Note, devoir.TypeBac ?? "général");
-            
+            Console.Write("   Analyse en cours");
+            var evaluation = await EvaluerCompetenceAsync(competence, copie, devoir.Enonce ?? "", devoir.Type ?? "dissertation", devoir.TypeBac ?? "général", aPAP);
 
             evaluations.Add(evaluation);
-
             Console.WriteLine($" ✅ Note: {evaluation.Note:F1}/20");
         }
 
@@ -80,14 +83,26 @@ public class CorrectionService
         // Calcul de la note moyenne
         var notesAjustees = evaluations.Select(e => AjusterNoteSelonNiveau(Convert.ToDouble(e.Note), devoir.TypeBac ?? "général")).ToList();
         
-        decimal noteMoyenne = (decimal)notesAjustees.Average();
 
-        // Afficher l'ajustement si applicable
+         // Calcul de la note moyenne avec pondération intelligente
+        var notesFinales = evaluations.Select(e => e.Note).ToList();
+        var notesFinalesDouble = notesFinales.Select(n => Convert.ToDouble(n)).ToList();
+        var noteMoyenne = AppliquerPonderation(notesFinalesDouble, devoir.TypeBac ?? "général", evaluations);
+
+        // Afficher les détails pour le bac technologique
         if (devoir.TypeBac == "technologique")
         {
-            var noteSansAjustement = evaluations.Average(e => e.Note);
-            Console.WriteLine($"📊 Note avant ajustement bac techno : {noteSansAjustement:F1}/20");
-            Console.WriteLine($"📊 Note après ajustement bac techno : {noteMoyenne:F1}/20 (+{noteMoyenne - noteSansAjustement:F1})");
+             var noteSansAjustement = evaluations.Average(e => e.Note);
+            Console.WriteLine($"📊 Note moyenne des compétences : {noteSansAjustement:F1}/20");
+            Console.WriteLine($"📊 Note finale après pondération bac techno : {noteMoyenne:F1}/20");
+            
+            // Debug : afficher quelques extraits d'analyse pour vérification
+            Console.WriteLine("🔍 Extraits d'analyses pour vérification :");
+            foreach (var eval in evaluations.Take(2))
+            {
+                var extrait = eval.Analyse?.Substring(0, Math.Min(eval.Analyse.Length, 100)) ?? "";
+                Console.WriteLine($"   • {eval.Nom}: {extrait}...");
+            }
         }
 
         // Création de la correction
@@ -98,7 +113,7 @@ public class CorrectionService
         {
             Id = newId,
             DevoirId = devoir.Id,
-            Note = noteMoyenne,
+            Note = (decimal)noteMoyenne,
             Appreciation = evaluationFinale.Appreciation,
             PointsForts = evaluationFinale.PointsForts,
             PointsAmeliorer = evaluationFinale.PointsAmeliorer,
@@ -115,7 +130,11 @@ public class CorrectionService
     /// Évalue une compétence spécifique
     /// </summary>
     private async Task<EvaluationCompetence> EvaluerCompetenceAsync(Competence competence, string copie, string enonce, string typeDevoir, string TypeBac, bool aPAP = false)    {
-        var system = "Vous êtes un professeur de philosophie expérimenté qui corrige des rédactions.";
+        var system = $@"Vous êtes un correcteur de philosophie qui évalue selon les standards RÉELS du bac {TypeBac}.
+        
+        ATTENTION : Cette copie doit être notée de manière DIFFÉRENCIÉE et RÉALISTE.
+- Ne donnez PAS la même note à toutes les compétences
+- Utilisez toute l'échelle de notation : 6-20/20";
         
         var messagePAP = aPAP ? "\n\nIMPORTANT : Cet élève dispose d'un PAP (Plan d'Accompagnement Personnalisé). Ne tenez pas compte de la qualité de l'orthographe, de la grammaire ou de l'expression écrite dans votre évaluation. Concentrez-vous uniquement sur le contenu philosophique et la réflexion." : "";
         
@@ -265,10 +284,183 @@ Pour l'appreciation addresses-toi à l'élève directement.
     {
         return typeBac switch
         {
-            "technologique" => Math.Min(20, note + 1.5), // Bonus de bienveillance pour bac techno
-            "général" => note, // Pas d'ajustement pour le bac général
-            _ => note // Par défaut, pas d'ajustement
+            "technologique" => Math.Min(20, note + 0.5),
+            "général" => note,
+            _ => note
         };
+    }
+    
+
+    /// <summary>
+    /// Détecte la qualité globale d'une copie basée sur les évaluations textuelles
+    /// </summary>
+    private string DetecterQualiteCopie(List<EvaluationCompetence> evaluations)
+    {
+        // Mots-clés pour copie de BONNE qualité
+        var motsClesBons = new[] { 
+            "pertinente", "pertinent", "solide", "structuré", "structurée", "claire", "clair", "clairement",
+            "bon", "bonne", "réussi", "efficace", "approprié", "appropriée", "cohérent", "cohérente",
+            "intéressant", "intéressante", "satisfaisant", "satisfaisante", "correct", "correcte",
+            "bien", "références", "philosophiques", "variées", "argumentatif", "argumentative",
+            "logique", "fluide", "plan", "problématique", "développé", "développée", "richesse",
+            "qualité", "maîtrise", "réflexion", "construction", "organisation", "progression",
+            "analyse", "synthèse", "articulation", "engagement", "effort", "capacité", "enrichit",
+            "enrichissant", "montre", "témoigne", "démontre", "réussi à", "parvenez", "identifié"
+        };
+        
+        // Mots-clés pour copie VRAIMENT faible (très restrictifs)
+        var motsClesFaibles = new[] { 
+            "très insuffisant", "insuffisant", "extrêmement faible", "grave lacune",
+            "incompréhensible", "incohérent totalement", "absent totalement", "inexistant",
+            "catastrophique", "désorganisé complètement", "inintelligible", 
+            "hors sujet", "sans rapport avec", "refuse de faire", "très faible"
+        };
+
+        // Mots-clés d'amélioration (neutres - ne comptent ni pour ni contre)
+        var motsClesAmeliorations = new[] {
+            "améliorer", "clarifier", "préciser", "développer", "renforcer", "éviter",
+            "corriger", "veiller", "attention", "pourrait", "aurait pu", "gagnerait",
+            "bénéficier", "manque", "manquer", "perfectible"
+        };
+
+        int scoreBon = 0;
+        int scoreFaible = 0;
+        int scoreAméliorations = 0;
+        int totalMots = 0;
+
+        foreach (var eval in evaluations)
+        {
+            var analyseTexte = eval.Analyse?.ToLower() ?? "";
+            var pointsForts = string.Join(" ", eval.PointsForts?.Select(p => p.ToLower()) ?? new List<string>());
+            var pointsAmeliorer = string.Join(" ", eval.PointsAmeliorer?.Select(p => p.ToLower()) ?? new List<string>());
+            
+            var texteComplet = $"{analyseTexte} {pointsForts}";
+            var mots = texteComplet.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            totalMots += mots.Length;
+            
+            // Compter les occurrences
+            foreach (var mot in motsClesBons)
+            {
+                var matches = System.Text.RegularExpressions.Regex.Matches(texteComplet, $@"\b{mot}\b");
+                scoreBon += matches.Count;
+            }
+            
+            foreach (var mot in motsClesFaibles)
+            {
+                var matches = System.Text.RegularExpressions.Regex.Matches(texteComplet, $@"\b{mot}\b");
+                scoreFaible += matches.Count;
+            }
+
+            foreach (var mot in motsClesAmeliorations)
+            {
+                var matches = System.Text.RegularExpressions.Regex.Matches(texteComplet, $@"\b{mot}\b");
+                scoreAméliorations += matches.Count;
+            }
+        }
+
+        // Calcul des densités (pourcentages)
+        var densiteBon = totalMots > 0 ? (double)scoreBon / totalMots * 100 : 0;
+        var densiteFaible = totalMots > 0 ? (double)scoreFaible / totalMots * 100 : 0;
+        var densiteAmeliorations = totalMots > 0 ? (double)scoreAméliorations / totalMots * 100 : 0;
+
+        // Calcul des moyennes de notes pour validation croisée
+        var moyenneNotes = evaluations.Average(e => e.Note);
+
+        Console.WriteLine($"🔍 Analyse qualité - Positif: {scoreBon}, Négatif: {scoreFaible}, Améliorations: {scoreAméliorations}");
+        Console.WriteLine($"🔍 Densités - Positif: {densiteBon:F1}%, Négatif: {densiteFaible:F1}%, Améliorations: {densiteAmeliorations:F1}%");
+        Console.WriteLine($"🔍 Moyenne des notes: {moyenneNotes:F1}/20");
+
+        // NOUVELLE LOGIQUE CORRIGÉE
+        // Une copie est bonne si elle a beaucoup de points positifs ET peu de vrais défauts
+        // Une copie est faible si elle a beaucoup de vrais défauts ET peu de points positifs
+        
+        if (moyenneNotes >= 13 && densiteBon >= 3.5 && densiteFaible <= 1.5)
+        {
+            return "bonne";
+        }
+        else if ((double)moyenneNotes >= 11.5 && densiteBon >= 2.5 && densiteFaible <= 2.0)
+        {
+            return "bonne";
+        }
+        else if (moyenneNotes < 9 && densiteFaible >= 2.0 && densiteBon <= 1.5)
+        {
+            return "faible";
+        }
+        else
+        {
+            return "moyenne";
+        }
+    }
+
+    /// <summary>
+    /// Applique une pondération plus subtile selon le type de bac
+    /// </summary>
+    private double AppliquerPonderation(List<double> notes, string typeBac, List<EvaluationCompetence> evaluations)
+    {
+        var moyenne = notes.Average();
+        var ecartType = CalculerEcartType(notes);
+        var qualiteCopie = DetecterQualiteCopie(evaluations);
+        
+        Console.WriteLine($"📊 Qualité détectée : {qualiteCopie}");
+        Console.WriteLine($"📊 Écart-type des notes : {ecartType:F2}");
+        
+        if (typeBac == "technologique")
+        {
+            switch (qualiteCopie)
+            {
+                case "bonne":
+                    // Copie de bonne qualité : ajustement positif significatif
+                    if (moyenne < 13)
+                    {
+                        moyenne = moyenne * 1.35; // +35% si sous-évaluée
+                        Console.WriteLine("✅ Ajustement positif fort pour copie bonne qualité sous-évaluée");
+                    }
+                    else if (moyenne < 15)
+                    {
+                        moyenne = moyenne * 1.20; // +20%
+                        Console.WriteLine("✅ Ajustement positif modéré pour copie bonne qualité");
+                    }
+                    else
+                    {
+                        moyenne = moyenne * 1.05; // +5% (déjà bien notée)
+                        Console.WriteLine("✅ Ajustement positif léger pour copie déjà bien notée");
+                    }
+                    break;
+                    
+                case "faible":
+                    // Copie vraiment faible : réduction
+                    moyenne = moyenne * 0.80; // -20%
+                    Console.WriteLine("📉 Ajustement négatif pour copie faible");
+                    break;
+                    
+                default: // moyenne
+                    // Copie moyenne : ajustement neutre
+                    moyenne = moyenne * 1.02; // +2% (bienveillance bac techno)
+                    Console.WriteLine("🔄 Ajustement neutre bienveillant pour copie moyenne");
+                    break;
+            }
+            
+            // Contraintes finales
+            moyenne = Math.Max(moyenne, 6.0);  // Minimum 6/20
+            moyenne = Math.Min(moyenne, 18.5); // Maximum 18.5/20
+            
+            return Math.Round(moyenne, 1);
+        }
+        
+        return Math.Round(moyenne, 1);
+
+    }
+
+    /// <summary>
+    /// Calcule l'écart-type pour détecter si les notes sont trop uniformes
+    /// </summary>
+    private double CalculerEcartType(List<double> notes)
+    {
+        if (notes.Count <= 1) return 0;
+    
+        var moyenne = notes.Average();
+        var variance = notes.Sum(x => Math.Pow(x - moyenne, 2)) / notes.Count;
+        return Math.Sqrt(variance);
     }
 
     /// <summary>

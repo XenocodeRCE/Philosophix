@@ -190,7 +190,8 @@ class Program
         {
             Console.WriteLine("Devoir introuvable.");
             return;
-        }        Console.WriteLine($"\nDevoir sélectionné : {devoirSelectionne.Titre}");
+        }
+        Console.WriteLine($"\nDevoir sélectionné : {devoirSelectionne.Titre}");
         Console.WriteLine($"Énoncé : {devoirSelectionne.Enonce}");
         Console.WriteLine($"Type : {devoirSelectionne.Type}");
 
@@ -247,7 +248,9 @@ class Program
             default:
                 Console.WriteLine("Choix invalide.");
                 return;
-        }        if (!CorrectionService.ValiderCopie(copie))
+        }
+
+        if (!CorrectionService.ValiderCopie(copie))
         {
             Console.WriteLine("La copie doit contenir au moins 500 caractères.");
             return;
