@@ -226,5 +226,81 @@
     },
     "type": "dissertation",
     "type_bac": "technologique"
+  },
+  {
+    "id": 4,
+    "titre": "bac tec txt option 1 quest",
+    "enonce": "Expliquer le texte suivant :  La soci\u00E9t\u00E9 peut se maintenir entre diff\u00E9rents hommes comme entre diff\u00E9rents  marchands, \u00E0 partir du sens de son utilit\u00E9, sans aucun lien r\u00E9ciproque d\u0027amour ou  d\u0027affection. Et quoique l\u0027homme qui en est membre ne soit li\u00E9 par aucune obligation,  ni par aucune forme de gratitude vis-\u00E0-vis d\u0027autrui, la soci\u00E9t\u00E9 peut toujours \u00EAtre  soutenue par l\u0027\u00E9change mercenaire1 de bons services selon des valeurs convenues.  La soci\u00E9t\u00E9, toutefois, ne peut subsister entre ceux qui sont toujours pr\u00EAts \u00E0 se nuire et  \u00E0 se causer du tort. D\u00E8s que surviennent les pr\u00E9judices2, d\u00E8s que s\u0027installent le  ressentiment r\u00E9ciproque et l\u0027animosit\u00E93, tous les liens de la soci\u00E9t\u00E9 sont d\u00E9chir\u00E9s, et  les diff\u00E9rents membres en quoi elle consistait sont, en quelque sorte, diss\u00E9min\u00E9s et  dispers\u00E9s \u00E0 l\u0027entour par la violence et l\u0027opposition de leurs sentiments discordants. S\u0027il  y a une soci\u00E9t\u00E9 entre des brigands et des assassins, ils doivent au moins, selon  l\u0027observation commune, s\u0027abstenir de se voler ou de s\u0027assassiner les uns les autres.  La bienfaisance est donc moins essentielle \u00E0 l\u0027existence de la soci\u00E9t\u00E9 que la justice.  La soci\u00E9t\u00E9 peut se maintenir sans bienfaisance, quoique dans un \u00E9tat qui ne soit pas  le plus confortable ; mais la pr\u00E9dominance de l\u0027injustice la d\u00E9truira absolument.  Adam Smith, Th\u00E9orie des sentiments moraux, 1759. --- 1mercenaire : qui se fait payer.  2pr\u00E9judices : perte, dommage ou atteinte caus\u00E9e par l\u0027action de quelqu\u0027un.  3animosit\u00E9 : sentiment hostile.  --- Questions de l\u0027option n\u00B01  A. \u00C9l\u00E9ments d\u0027analyse  1. En quoi les rapports entre les hommes en soci\u00E9t\u00E9 peuvent-ils \u00EAtre compar\u00E9s \u00E0 des  rapports \u00AB entre diff\u00E9rents marchands \u00BB ?  2. En prenant appui sur l\u0027exemple d\u0027une association de brigands et d\u0027assassins,  expliquer quelle est la condition pour que la soci\u00E9t\u00E9 puisse \u00AB subsister \u00BB.  3. Quelle diff\u00E9rence peut-on faire entre la bienfaisance et la justice ? Quelle est leur  importance respective en soci\u00E9t\u00E9 ?  B. \u00C9l\u00E9ments de synth\u00E8se  1. Quelle est la question \u00E0 laquelle l\u0027auteur tente de r\u00E9pondre dans ce texte ?  2. D\u00E9gager les diff\u00E9rents moments de l\u0027argumentation.  3. En prenant appui sur les \u00E9l\u00E9ments pr\u00E9c\u00E9dents, d\u00E9gager l\u0027id\u00E9e principale du texte.  C. Commentaire  1. Si les hommes sont \u00E9go\u00EFstes, une soci\u00E9t\u00E9 juste est-elle impossible ?  2. L\u0027injustice d\u00E9truit-elle n\u00E9cessairement la soci\u00E9t\u00E9 ?",
+    "contenu": "n/a",
+    "date_creation": "2025-06-23T20:32:46.0494304+02:00",
+    "bareme": {
+      "competences": [
+        {
+          "id": 1,
+          "nom": "Lecture analytique et compr\u00E9hension globale",
+          "criteres": [
+            "Identification de la th\u00E8se principale",
+            "Rep\u00E9rage de la structure g\u00E9n\u00E9rale",
+            "Compr\u00E9hension des enjeux du texte"
+          ]
+        },
+        {
+          "id": 2,
+          "nom": "Analyse de la structure argumentative",
+          "criteres": [
+            "D\u00E9coupage en s\u00E9quences logiques",
+            "Rep\u00E9rage des articulations",
+            "Identification des mouvements du texte"
+          ]
+        },
+        {
+          "id": 3,
+          "nom": "Analyse conceptuelle",
+          "criteres": [
+            "D\u00E9finition des concepts cl\u00E9s",
+            "Compr\u00E9hension des distinctions conceptuelles",
+            "Mise en relation des notions"
+          ]
+        },
+        {
+          "id": 4,
+          "nom": "Analyse argumentative",
+          "criteres": [
+            "Reconstruction des raisonnements",
+            "Identification des types d\u0027arguments",
+            "Rep\u00E9rage des exemples et illustrations"
+          ]
+        },
+        {
+          "id": 5,
+          "nom": "Contextualisation philosophique",
+          "criteres": [
+            "Situation historique",
+            "Liens avec d\u0027autres auteurs",
+            "Mobilisation des connaissances du cours"
+          ]
+        },
+        {
+          "id": 6,
+          "nom": "Expression et r\u00E9daction",
+          "criteres": [
+            "Clart\u00E9 de l\u0027explication",
+            "Pr\u00E9cision du vocabulaire",
+            "Structure de l\u0027explication"
+          ]
+        },
+        {
+          "id": 7,
+          "nom": "Appropriation critique",
+          "criteres": [
+            "\u00C9valuation de la coh\u00E9rence",
+            "Discussion des arguments",
+            "Prolongements pertinents"
+          ]
+        }
+      ]
+    },
+    "type": "explication",
+    "type_bac": "technologique"
   }
 ]

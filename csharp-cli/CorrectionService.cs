@@ -88,7 +88,7 @@ public class CorrectionService
         // Calcul de la note moyenne avec pondération intelligente
         var notesFinales = evaluations.Select(e => e.Note).ToList();
         var notesFinalesDouble = notesFinales.Select(n => Convert.ToDouble(n)).ToList();
-        var noteMoyenne = AppliquerPonderation(notesFinalesDouble, devoir.TypeBac ?? "général", evaluations);
+        var noteMoyenne = AppliquerPonderation(notesFinalesDouble, devoir.TypeBac ?? "général", evaluations, devoir.Type);
 
         // Afficher les détails pour le bac technologique
         if (devoir.TypeBac == "technologique")
@@ -377,11 +377,12 @@ Pour l'appreciation addresses-toi à l'élève directement.
         // Une copie est bonne si elle a beaucoup de points positifs ET peu de vrais défauts
         // Une copie est faible si elle a beaucoup de vrais défauts ET peu de points positifs
 
-        if (moyenneNotes >= 13 && densiteBon >= 3.5 && densiteFaible <= 1.5)
+        // LOGIQUE AJUSTÉE : plus restrictive pour les moyennes notes
+        if (moyenneNotes >= 14 && densiteBon >= 4.0 && densiteFaible <= 1.0)
         {
             return "bonne";
         }
-        else if ((double)moyenneNotes >= 11.5 && densiteBon >= 2.5 && densiteFaible <= 2.0)
+        else if ((double)moyenneNotes >= 12.5 && densiteBon >= 3.0 && densiteFaible <= 1.5)
         {
             return "bonne";
         }
@@ -398,58 +399,95 @@ Pour l'appreciation addresses-toi à l'élève directement.
     /// <summary>
     /// Applique une pondération plus subtile selon le type de bac
     /// </summary>
-    private double AppliquerPonderation(List<double> notes, string typeBac, List<EvaluationCompetence> evaluations)
+    private double AppliquerPonderation(List<double> notes, string typeBac, List<EvaluationCompetence> evaluations, string typeDevoir = "dissertation")
     {
         var moyenne = notes.Average();
         var ecartType = CalculerEcartType(notes);
         var qualiteCopie = DetecterQualiteCopie(evaluations);
-
+        
         Console.WriteLine($"📊 Qualité détectée : {qualiteCopie}");
         Console.WriteLine($"📊 Écart-type des notes : {ecartType:F2}");
-
+        Console.WriteLine($"📊 Type de devoir : {typeDevoir}");
+        
         if (typeBac == "technologique")
         {
-            switch (qualiteCopie)
+            // Ajustement différent selon le type de devoir
+            if (typeDevoir?.ToLower() == "explication")
             {
-                case "bonne":
-                    // Copie de bonne qualité : ajustement positif significatif
-                    if (moyenne < 13)
-                    {
-                        moyenne = moyenne * 1.35; // +35% si sous-évaluée
-                        Console.WriteLine("✅ Ajustement positif fort pour copie bonne qualité sous-évaluée");
-                    }
-                    else if (moyenne < 15)
-                    {
-                        moyenne = moyenne * 1.20; // +20%
-                        Console.WriteLine("✅ Ajustement positif modéré pour copie bonne qualité");
-                    }
-                    else
-                    {
-                        moyenne = moyenne * 1.05; // +5% (déjà bien notée)
-                        Console.WriteLine("✅ Ajustement positif léger pour copie déjà bien notée");
-                    }
-                    break;
-
-                case "faible":
-                    // Copie vraiment faible : réduction
-                    moyenne = moyenne * 0.80; // -20%
-                    Console.WriteLine("📉 Ajustement négatif pour copie faible");
-                    break;
-
-                default: // moyenne
-                    // Copie moyenne : ajustement neutre
-                    moyenne = moyenne * 1.02; // +2% (bienveillance bac techno)
-                    Console.WriteLine("🔄 Ajustement neutre bienveillant pour copie moyenne");
-                    break;
+                // Pour les explications : ajustements TRÈS modérés
+                switch (qualiteCopie)
+                {
+                    case "bonne":
+                        if (moyenne < 10)
+                        {
+                            moyenne = moyenne * 1.10; // +10% seulement si très sous-évaluée
+                            Console.WriteLine("✅ Ajustement modéré pour explication bonne qualité sous-évaluée");
+                        }
+                        else if (moyenne < 12)
+                        {
+                            moyenne = moyenne * 1.05; // +5%
+                            Console.WriteLine("✅ Ajustement léger pour explication bonne qualité");
+                        }
+                        else
+                        {
+                            moyenne = moyenne * 1.00; // Pas d'ajustement (déjà correcte)
+                            Console.WriteLine("✅ Pas d'ajustement pour explication déjà bien notée");
+                        }
+                        break;
+                        
+                    case "faible":
+                        moyenne = moyenne * 0.85; // -15%
+                        Console.WriteLine("📉 Ajustement négatif pour explication faible");
+                        break;
+                        
+                    default: // moyenne
+                        moyenne = moyenne * 1.00; // Pas d'ajustement
+                        Console.WriteLine("🔄 Pas d'ajustement pour explication moyenne");
+                        break;
+                }
             }
-
+            else
+            {
+                // Pour les dissertations : ajustements plus significatifs
+                switch (qualiteCopie)
+                {
+                    case "bonne":
+                        if (moyenne < 13)
+                        {
+                            moyenne = moyenne * 1.35; // +35% si sous-évaluée
+                            Console.WriteLine("✅ Ajustement positif fort pour dissertation bonne qualité sous-évaluée");
+                        }
+                        else if (moyenne < 15)
+                        {
+                            moyenne = moyenne * 1.20; // +20%
+                            Console.WriteLine("✅ Ajustement positif modéré pour dissertation bonne qualité");
+                        }
+                        else
+                        {
+                            moyenne = moyenne * 1.05; // +5% (déjà bien notée)
+                            Console.WriteLine("✅ Ajustement positif léger pour dissertation déjà bien notée");
+                        }
+                        break;
+                        
+                    case "faible":
+                        moyenne = moyenne * 0.80; // -20%
+                        Console.WriteLine("📉 Ajustement négatif pour dissertation faible");
+                        break;
+                        
+                    default: // moyenne
+                        moyenne = moyenne * 1.02; // +2% (bienveillance bac techno)
+                        Console.WriteLine("🔄 Ajustement neutre bienveillant pour dissertation moyenne");
+                        break;
+                }
+            }
+            
             // Contraintes finales
             moyenne = Math.Max(moyenne, 6.0);  // Minimum 6/20
             moyenne = Math.Min(moyenne, 18.5); // Maximum 18.5/20
-
+            
             return Math.Round(moyenne, 1);
         }
-
+        
         return Math.Round(moyenne, 1);
 
     }
@@ -641,7 +679,7 @@ Pour l'appreciation addresses-toi à l'élève directement.
             {
                 var eval = correction.Competences[i];
 
-                contenu.AppendLine($"\n{i + 1}. {eval.Nom.ToUpper()}");
+                contenu.AppendLine($"\n{i + 1}. {(eval.Nom != null ? eval.Nom.ToUpper() : "COMPÉTENCE SANS NOM")}");
                 contenu.AppendLine($"   Note : {eval.Note:F1}/20");
                 contenu.AppendLine("   " + new string('─', 75));
 
