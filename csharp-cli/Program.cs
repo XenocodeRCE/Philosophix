@@ -11,6 +11,7 @@ class Program
         var dbService = new JsonDatabaseService("devoirs.json");
         var openAiService = new OpenAiService();
         var correctionService = new CorrectionService(openAiService, dbService);
+        var annotationService = new AnnotationService(openAiService, dbService);
 
         while (true)
         {
@@ -23,8 +24,10 @@ class Program
             Console.WriteLine("2. Voir les devoirs");
             Console.WriteLine("3. Corriger une copie");
             Console.WriteLine("4. Voir les corrections");
-            Console.WriteLine("5. Réinitialiser le compteur de coûts");
-            Console.WriteLine("6. Quitter");
+            Console.WriteLine("5. Annoter une copie");
+            Console.WriteLine("6. Voir les annotations");
+            Console.WriteLine("7. Réinitialiser le compteur de coûts");
+            Console.WriteLine("8. Quitter");
             Console.WriteLine();
             Console.Write("Votre choix : ");
 
@@ -37,23 +40,28 @@ class Program
                     break;
                 case "2":
                     await VoirDevoirsAsync(dbService);
-                    break;
-                case "3":
+                    break;                case "3":
                     await CorrigerCopieAsync(dbService, correctionService);
                     break;
                 case "4":
                     await VoirCorrectionsAsync(dbService);
                     break;
                 case "5":
-                    openAiService.CostTracker.Reset();
+                    await AnnoterCopieAsync(dbService, annotationService);
                     break;
                 case "6":
+                    await VoirAnnotationsAsync(dbService, annotationService);
+                    break;
+                case "7":
+                    openAiService.CostTracker.Reset();
+                    break;
+                case "8":
                     Console.WriteLine("Au revoir !");
                     return;
                 default:
                     Console.WriteLine("Choix invalide.");
                     break;
-            }            if (choix != "6")
+            }            if (choix != "8")
             {
                 Console.WriteLine("\nAppuyez sur une touche pour continuer...");
                 Console.ReadKey();
@@ -260,6 +268,16 @@ class Program
             var correction = await correctionService.CorrigerCopieAsync(devoirSelectionne, copie, aPAP);
             CorrectionService.AfficherResultatsCorrection(correction, devoirSelectionne.Bareme?.Competences ?? new List<Competence>());
             CorrectionService.ExporterCorrectionAsync(correction, devoirSelectionne).Wait();
+
+            // Proposer l'annotation automatique après la correction
+            Console.WriteLine("\n" + new string('─', 60));
+            Console.Write("🔍 Voulez-vous générer des annotations pour cette copie ? (o/n) : ");
+            var choixAnnotation = Console.ReadLine()?.ToLower();
+            
+            if (choixAnnotation == "o" || choixAnnotation == "oui")
+            {
+                await GenererAnnotationsPourCorrection(correction, devoirSelectionne);
+            }
         }
         catch (Exception ex)
         {
@@ -303,6 +321,177 @@ class Program
             {
                 var devoir = devoirs.FirstOrDefault(d => d.Id == correction.DevoirId);
                 CorrectionService.AfficherResultatsCorrection(correction, devoir?.Bareme?.Competences ?? new List<Competence>());
+            }
+            else
+            {
+                Console.WriteLine("Correction introuvable.");
+            }
+        }
+    }
+
+    /// <summary>
+    /// Génère des annotations pour une correction donnée
+    /// </summary>
+    static async Task GenererAnnotationsPourCorrection(Correction correction, Devoir devoir)
+    {        try
+        {
+            var openAiService = new OpenAiService();
+            var dbService = new JsonDatabaseService("devoirs.json");
+            var annotationService = new AnnotationService(openAiService, dbService);
+
+            Console.WriteLine("\n" + new string('═', 60));
+            Console.WriteLine("🔍 GÉNÉRATION D'ANNOTATIONS AUTOMATIQUES");
+            Console.WriteLine(new string('═', 60));
+
+            var startTime = DateTime.Now;
+            var annotations = await annotationService.GenererAnnotationsAvecTypes(correction);
+            var endTime = DateTime.Now;
+            var duration = endTime - startTime;
+
+            Console.WriteLine($"\n⏱️  Durée de génération : {duration.TotalSeconds:F1}s");
+            Console.WriteLine($"💰 Coût estimé affiché dans les logs API");
+            
+            AnnotationService.AfficherAnnotations(annotations);
+
+            // Proposer l'export des annotations
+            Console.Write("\n📄 Voulez-vous exporter les annotations ? (o/n) : ");
+            var choixExport = Console.ReadLine()?.ToLower();
+            
+            if (choixExport == "o" || choixExport == "oui")
+            {
+                await AnnotationService.ExporterAnnotationsAsync(annotations, correction, devoir);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"\n❌ Erreur lors de la génération d'annotations : {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Menu pour annoter une copie déjà corrigée
+    /// </summary>
+    static async Task AnnoterCopieAsync(JsonDatabaseService dbService, AnnotationService annotationService)
+    {
+        Console.WriteLine("\n╔══════════════════════════════════════════════════════╗");
+        Console.WriteLine("║                ANNOTATION DE COPIE                   ║");
+        Console.WriteLine("╚══════════════════════════════════════════════════════╝");
+
+        var corrections = await dbService.LireCorrectionsAsync();
+        if (corrections.Count == 0)
+        {
+            Console.WriteLine("Aucune correction disponible. Corrigez d'abord une copie.");
+            return;
+        }
+
+        Console.WriteLine("\nCorrections disponibles :");
+        var devoirs = await dbService.LireDevoirsAsync();
+        
+        foreach (var correction in corrections.OrderByDescending(c => c.DateCorrection))
+        {
+            var devoir = devoirs.FirstOrDefault(d => d.Id == correction.DevoirId);
+            Console.WriteLine($"{correction.Id}. {devoir?.Titre ?? "Inconnu"} - Note: {correction.Note:F1}/20 - {correction.DateCorrection:dd/MM/yyyy}");
+        }
+
+        Console.Write("\nSélectionnez l'ID de la correction à annoter : ");
+        if (!int.TryParse(Console.ReadLine(), out int correctionId))
+        {
+            Console.WriteLine("ID invalide.");
+            return;
+        }
+
+        var correctionSelectionnee = corrections.FirstOrDefault(c => c.Id == correctionId);
+        if (correctionSelectionnee == null)
+        {
+            Console.WriteLine("Correction introuvable.");
+            return;
+        }
+
+        var devoirAssocie = devoirs.FirstOrDefault(d => d.Id == correctionSelectionnee.DevoirId);
+        if (devoirAssocie == null)
+        {
+            Console.WriteLine("Devoir associé introuvable.");
+            return;
+        }
+
+        // Vérifier si des annotations existent déjà
+        var annotationsExistantes = await annotationService.ChargerAnnotationsAsync(correctionId);
+        if (annotationsExistantes != null)
+        {
+            Console.WriteLine("\n⚠️  Des annotations existent déjà pour cette correction.");
+            Console.Write("Voulez-vous les régénérer ? (o/n) : ");
+            var choixRegenerer = Console.ReadLine()?.ToLower();
+            
+            if (choixRegenerer != "o" && choixRegenerer != "oui")
+            {
+                AnnotationService.AfficherAnnotations(annotationsExistantes);
+                return;
+            }
+        }
+
+        await GenererAnnotationsPourCorrection(correctionSelectionnee, devoirAssocie);
+    }
+
+    /// <summary>
+    /// Menu pour voir les annotations existantes
+    /// </summary>
+    static async Task VoirAnnotationsAsync(JsonDatabaseService dbService, AnnotationService annotationService)
+    {
+        Console.WriteLine("\n╔══════════════════════════════════════════════════════╗");
+        Console.WriteLine("║                 LISTE DES ANNOTATIONS                ║");
+        Console.WriteLine("╚══════════════════════════════════════════════════════╝");
+
+        var corrections = await dbService.LireCorrectionsAsync();
+        var devoirs = await dbService.LireDevoirsAsync();
+
+        if (corrections.Count == 0)
+        {
+            Console.WriteLine("Aucune correction disponible.");
+            return;
+        }
+
+        // Lister les corrections qui ont des annotations
+        var correctionsAvecAnnotations = new List<(Correction correction, Devoir? devoir, AnnotationResponse annotations)>();
+
+        foreach (var correction in corrections)
+        {
+            var annotations = await annotationService.ChargerAnnotationsAsync(correction.Id);
+            if (annotations != null)
+            {
+                var devoir = devoirs.FirstOrDefault(d => d.Id == correction.DevoirId);
+                correctionsAvecAnnotations.Add((correction, devoir, annotations));
+            }
+        }
+
+        if (!correctionsAvecAnnotations.Any())
+        {
+            Console.WriteLine("Aucune annotation disponible. Annotez d'abord une copie.");
+            return;
+        }
+
+        Console.WriteLine("\nCorrections avec annotations :");
+        foreach (var (correction, devoir, annotations) in correctionsAvecAnnotations.OrderByDescending(x => x.correction.DateCorrection))
+        {
+            Console.WriteLine($"{correction.Id}. {devoir?.Titre ?? "Inconnu"} - {annotations.Annotations?.Count ?? 0} annotations - {correction.DateCorrection:dd/MM/yyyy}");
+        }
+
+        Console.Write("\nSélectionnez l'ID de la correction (ou 'n' pour annuler) : ");
+        var choix = Console.ReadLine();
+        
+        if (int.TryParse(choix, out int correctionId))
+        {
+            var element = correctionsAvecAnnotations.FirstOrDefault(x => x.correction.Id == correctionId);
+            if (element.correction != null)
+            {
+                AnnotationService.AfficherAnnotations(element.annotations);
+                
+                Console.Write("\n📄 Voulez-vous exporter ces annotations ? (o/n) : ");
+                var choixExport = Console.ReadLine()?.ToLower();
+                
+                if (choixExport == "o" || choixExport == "oui")
+                {
+                    await AnnotationService.ExporterAnnotationsAsync(element.annotations, element.correction, element.devoir ?? new Devoir());
+                }
             }
             else
             {
