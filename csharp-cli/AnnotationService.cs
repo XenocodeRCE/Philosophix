@@ -11,14 +11,14 @@ using System.Threading.Tasks;
 /// </summary>
 public class AnnotationService
 {
-    private readonly OpenAiService _openAiService;
+    private readonly ILLMService _llmService;
     private readonly JsonDatabaseService _dbService;
 
-    public AnnotationService(OpenAiService openAiService, JsonDatabaseService dbService)
+    public AnnotationService(ILLMService llmService, JsonDatabaseService dbService)
     {
-        _openAiService = openAiService;
+        _llmService = llmService;
         _dbService = dbService;
-    }    /// <summary>
+    }/// <summary>
     /// Génère des annotations pour une copie déjà corrigée
     /// </summary>
     public async Task<AnnotationResponse> GenererAnnotationsAsync(Correction correction)
@@ -84,7 +84,7 @@ RÉPONDEZ UNIQUEMENT au format JSON suivant (sans texte avant ou après) :
         {
             Console.WriteLine("\n🔍 Génération des annotations...");
             
-            response = await _openAiService.AskGptAsync(systemMessage, prompt, "Annotation");
+            response = await _llmService.AskAsync(systemMessage, prompt, "Annotation");
             
             if (string.IsNullOrEmpty(response))
             {
@@ -156,7 +156,7 @@ Format de réponse JSON requis (UNIQUEMENT ce JSON) :
         {{""passage"": ""deuxième citation exacte"", ""commentaire"": ""deuxième commentaire""}},
         {{""passage"": ""troisième citation exacte"", ""commentaire"": ""troisième commentaire""}}
     ]
-}}";var response = await _openAiService.AskGptAsync(
+}}";            var response = await _llmService.AskAsync(
                 "Vous êtes professeur de philosophie. Répondez en JSON uniquement.", 
                 promptSimple, 
                 "Annotation simplifiée"
@@ -573,7 +573,7 @@ Répondez UNIQUEMENT au format JSON suivant :
 
         var systemMessage = $"Vous êtes un professeur de philosophie qui annote des copies selon le type '{type}'. Répondez UNIQUEMENT avec du JSON valide.";        try
         {
-            var response = await _openAiService.AskGptAsync(systemMessage, prompt, $"Annotation {type}");
+            var response = await _llmService.AskAsync(systemMessage, prompt, $"Annotation {type}");
             
             if (string.IsNullOrEmpty(response))
             {

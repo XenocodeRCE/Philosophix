@@ -7,14 +7,17 @@ using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.IO;
 
-public class OpenAiService
+public class OpenAiService : ILLMService
 {
     private readonly HttpClient _httpClient;
     private readonly string _apiKey;
     private readonly string _model;
     private readonly int _maxTokens;
     private readonly double _temperature;
-    public CostCalculator CostTracker { get; private set; }
+    
+    public CostCalculator? CostTracker { get; private set; }
+    public string ServiceName => "OpenAI";
+    public string ModelName => _model;
 
     public OpenAiService()
     {
@@ -56,14 +59,23 @@ public class OpenAiService
         }
         catch (Exception ex)
         {
-            throw new InvalidOperationException($"Erreur lors du chargement de la configuration : {ex.Message}");
-        }
-    }public async Task<string> AskGptAsync(string system, string prompt, string requestType = "Requête")
+            throw new InvalidOperationException($"Erreur lors du chargement de la configuration : {ex.Message}");        }
+    }
+
+    /// <summary>
+    /// Implémentation de l'interface ILLMService pour AskAsync
+    /// </summary>
+    public async Task<string> AskAsync(string systemMessage, string userPrompt, string operationType)
+    {
+        return await AskGptAsync(systemMessage, userPrompt, operationType);
+    }
+
+    public async Task<string> AskGptAsync(string system, string prompt, string requestType = "Requête")
     {
         var url = "https://api.openai.com/v1/chat/completions";
 
         // Estimer les tokens d'entrée
-        var inputTokens = CostCalculator.EstimateTokens(system + prompt);        var requestData = new
+        var inputTokens = CostCalculator.EstimateTokens(system + prompt);var requestData = new
         {
             messages = new[]
             {
@@ -93,15 +105,14 @@ public class OpenAiService
                 var apiResponse = JsonSerializer.Deserialize<OpenAiApiResponse>(responseBody);
                 var responseContent = apiResponse?.Choices?[0]?.Message?.Content ?? "";
                 var outputTokens = CostCalculator.EstimateTokens(responseContent);
-                
-                // Ajouter le coût au tracker
-                CostTracker.AddRequest(requestType, inputTokens, outputTokens);
+                  // Ajouter le coût au tracker
+                CostTracker?.AddRequest(requestType, inputTokens, outputTokens);
             }
             catch
             {
                 // En cas d'erreur, utiliser les estimations
                 var outputTokens = CostCalculator.EstimateTokens("Erreur de réponse");
-                CostTracker.AddRequest(requestType, inputTokens, outputTokens);
+                CostTracker?.AddRequest(requestType, inputTokens, outputTokens);
             }
             
             return responseBody;
@@ -221,7 +232,9 @@ public class Message
 // Classes pour la configuration appsettings.json
 public class AppSettings
 {
+    public LLMSettings LLM { get; set; } = new();
     public OpenAISettings OpenAI { get; set; } = new();
+    public OllamaSettings Ollama { get; set; } = new();
     public DatabaseSettings Database { get; set; } = new();
     public CorrectionSettings Correction { get; set; } = new();
 }

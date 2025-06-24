@@ -3,11 +3,18 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Text;
+using System.Text.Json;
 
 public class CorrectionService
 {
-    private readonly OpenAiService _openAiService;
+    private readonly ILLMService _llmService;
     private readonly JsonDatabaseService _dbService;
+
+    public CorrectionService(ILLMService llmService, JsonDatabaseService dbService)
+    {
+        _llmService = llmService;
+        _dbService = dbService;
+    }
 
     /// <summary>
     /// Obtient le niveau de sévérité selon le type de bac
@@ -25,14 +32,10 @@ public class CorrectionService
 
             "général" => "Degré de sévérité : 3 / 5",
             _ => "Degré de sévérité : 3 / 5"
-        };
-    }
+        };    }
 
-    public CorrectionService(OpenAiService openAiService, JsonDatabaseService dbService)
-    {
-        _openAiService = openAiService;
-        _dbService = dbService;
-    }    /// <summary>
+    // Suppression de l'ancien constructeur OpenAI-spécifique
+    // Il est maintenant remplacé par le constructeur ILLMService/// <summary>
          /// Lance le processus complet de correction d'une copie
          /// </summary>
     public async Task<Correction> CorrigerCopieAsync(Devoir devoir, string copie, bool aPAP = false)
@@ -75,11 +78,9 @@ public class CorrectionService
 
         // Évaluation finale
         Console.WriteLine("\n🎯 Génération de l'évaluation finale...");
-        var evaluationFinale = await EvaluerFinalAsync(evaluations, competences, copie, devoir.Type ?? "dissertation", devoir.TypeBac ?? "général", aPAP);
-
-        // Afficher le résumé des coûts
+        var evaluationFinale = await EvaluerFinalAsync(evaluations, competences, copie, devoir.Type ?? "dissertation", devoir.TypeBac ?? "général", aPAP);        // Afficher le résumé des coûts
         Console.WriteLine("\n" + new string('─', 60));
-        _openAiService.CostTracker.DisplayCostSummary();
+        _llmService.CostTracker?.DisplayCostSummary();
 
         // Calcul de la note moyenne
         var notesAjustees = evaluations.Select(e => AjusterNoteSelonNiveau(Convert.ToDouble(e.Note), devoir.TypeBac ?? "général")).ToList();
@@ -88,7 +89,7 @@ public class CorrectionService
         // Calcul de la note moyenne avec pondération intelligente
         var notesFinales = evaluations.Select(e => e.Note).ToList();
         var notesFinalesDouble = notesFinales.Select(n => Convert.ToDouble(n)).ToList();
-        var noteMoyenne = AppliquerPonderation(notesFinalesDouble, devoir.TypeBac ?? "général", evaluations, devoir.Type);
+        var noteMoyenne = AppliquerPonderation(notesFinalesDouble, devoir.TypeBac ?? "général", evaluations, devoir.Type ?? "dissertation");
 
         // Afficher les détails pour le bac technologique
         if (devoir.TypeBac == "technologique")
@@ -179,10 +180,8 @@ Répondez UNIQUEMENT au format JSON suivant :
 Évaluez UNIQUEMENT cette compétence, rien d'autre.
 Pour l'analyse, cites des éléments de la copie pour justifier ta note, et addresses-toi à l'élève directement.
 
-{GetSeverite(TypeBac)}";
-
-        var response = await _openAiService.AskGptAsync(system, prompt, $"Compétence: {competence.Nom}");
-        var evaluation = _openAiService.ParseEvaluationResponse(response);
+{GetSeverite(TypeBac)}";        var response = await _llmService.AskAsync(system, prompt, $"Compétence: {competence.Nom}");
+        var evaluation = ParseEvaluationResponse(response);
 
         // Ajouter le nom de la compétence à l'évaluation
         evaluation.Nom = competence.Nom;
@@ -234,10 +233,8 @@ Répondez UNIQUEMENT au format JSON suivant :
 }}
 
 Pour l'appreciation addresses-toi à l'élève directement.
-{GetSeverite(TypeBac)}";
-
-        var response = await _openAiService.AskGptAsync(system, prompt, "Évaluation finale");
-        return _openAiService.ParseEvaluationFinaleResponse(response);
+{GetSeverite(TypeBac)}";        var response = await _llmService.AskAsync(system, prompt, "Évaluation finale");
+        return ParseEvaluationFinaleResponse(response);
     }
 
     /// <summary>
@@ -734,6 +731,131 @@ Pour l'appreciation addresses-toi à l'élève directement.
         return cheminComplet;
     }
     
+    /// <summary>
+    /// Parse la réponse de l'évaluation d'une compétence
+    /// </summary>
+    private EvaluationCompetence ParseEvaluationResponse(string apiResponse)
+    {
+        try
+        {
+            // Extraire le contenu JSON depuis la réponse (OpenAI ou Ollama)
+            var content = ExtraireContenuMessage(apiResponse);
+            if (!string.IsNullOrEmpty(content))
+            {
+                // Nettoyer la réponse des balises Markdown
+                var cleanJson = content.Replace("```json", "").Replace("```", "").Trim();
+                var evaluation = JsonSerializer.Deserialize<EvaluationApiResponse>(cleanJson, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+                
+                var result = new EvaluationCompetence();
+                result.Note = evaluation?.Note ?? 0;
+                result.Analyse = evaluation?.Analyse;
+                result.PointsForts = evaluation?.PointsForts;
+                result.PointsAmeliorer = evaluation?.PointsAmeliorer;
+                
+                return result;
+            }
+            throw new Exception("Contenu vide");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Erreur lors du parsing : {ex.Message}");
+            Console.WriteLine($"Réponse brute : {apiResponse.Substring(0, Math.Min(200, apiResponse.Length))}...");
+            
+            // Retourner une évaluation par défaut en cas d'erreur
+            var errorResult = new EvaluationCompetence();
+            errorResult.Note = 10;
+            errorResult.Analyse = "Erreur lors de l'analyse automatique";
+            errorResult.PointsForts = new List<string> { "Analyse non disponible" };
+            errorResult.PointsAmeliorer = new List<string> { "Réessayer la correction" };
+            
+            return errorResult;
+        }
+    }
 
+    /// <summary>
+    /// Parse la réponse de l'évaluation finale
+    /// </summary>
+    private EvaluationFinaleApiResponse ParseEvaluationFinaleResponse(string apiResponse)
+    {
+        try
+        {
+            var content = ExtraireContenuMessage(apiResponse);
+            if (!string.IsNullOrEmpty(content))
+            {
+                // Nettoyer la réponse des balises Markdown
+                var cleanJson = content.Replace("```json", "").Replace("```", "").Trim();
+                var evaluation = JsonSerializer.Deserialize<EvaluationFinaleApiResponse>(cleanJson, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+                
+                return evaluation ?? new EvaluationFinaleApiResponse
+                {
+                    Appreciation = "Erreur lors de la génération de l'appréciation",
+                    PointsForts = new List<string> { "Analyse non disponible" },
+                    PointsAmeliorer = new List<string> { "Réessayer la correction" }
+                };
+            }
+            throw new Exception("Contenu vide");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Erreur lors du parsing de l'évaluation finale : {ex.Message}");
+            Console.WriteLine($"Réponse brute : {apiResponse.Substring(0, Math.Min(200, apiResponse.Length))}...");
+            
+            // Retourner une évaluation par défaut en cas d'erreur
+            return new EvaluationFinaleApiResponse
+            {
+                Appreciation = "Erreur lors de la génération de l'appréciation automatique",
+                PointsForts = new List<string> { "Analyse non disponible" },
+                PointsAmeliorer = new List<string> { "Réessayer la correction" }
+            };
+        }
+    }
 
+    /// <summary>
+    /// Extrait le contenu du message depuis une réponse LLM (OpenAI ou Ollama)
+    /// </summary>
+    private string ExtraireContenuMessage(string response)
+    {
+        try
+        {
+            using var document = JsonDocument.Parse(response);
+            var root = document.RootElement;
+
+            // Format OpenAI
+            if (root.TryGetProperty("choices", out var choices) && choices.GetArrayLength() > 0)
+            {
+                var firstChoice = choices[0];
+                if (firstChoice.TryGetProperty("message", out var message))
+                {
+                    if (message.TryGetProperty("content", out var content))
+                    {
+                        return content.GetString() ?? "";
+                    }
+                }
+            }
+
+            // Format Ollama
+            if (root.TryGetProperty("message", out var ollamaMessage))
+            {
+                if (ollamaMessage.TryGetProperty("content", out var ollamaContent))
+                {
+                    return ollamaContent.GetString() ?? "";
+                }
+            }
+
+            // Si on ne trouve pas la structure attendue, retourner la réponse brute
+            return response;
+        }
+        catch (JsonException)
+        {            // Si ce n'est pas du JSON, c'est peut-être déjà le contenu pur
+            return response;
+        }
+    }
+
+    // ...existing code...
 }

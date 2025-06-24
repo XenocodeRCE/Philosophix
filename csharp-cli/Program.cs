@@ -8,13 +8,27 @@ using System.Linq;
 class Program
 {    static async Task Main(string[] args)
     {
-        var dbService = new JsonDatabaseService("devoirs.json");
-        var openAiService = new OpenAiService();
-        var correctionService = new CorrectionService(openAiService, dbService);
-        var annotationService = new AnnotationService(openAiService, dbService);
-
-        while (true)
+        try
         {
+            // Afficher la configuration LLM active
+            LLMServiceFactory.AfficherInfoConfiguration();
+
+            var dbService = new JsonDatabaseService("devoirs.json");
+            var llmService = LLMServiceFactory.CreateService();
+            var correctionService = new CorrectionService(llmService, dbService);
+            var annotationService = new AnnotationService(llmService, dbService);
+
+            // Vérifier la connexion Ollama si configuré
+            if (!await LLMServiceFactory.VerifierConnexionOllamaAsync())
+            {
+                Console.WriteLine("⚠️  Attention : Ollama configuré mais non accessible. Vérifiez qu'Ollama est démarré.");
+                Console.WriteLine("    Lancez 'ollama serve' dans un terminal ou changez le provider dans appsettings.json");
+                Console.WriteLine("    Appuyez sur une touche pour continuer quand même...");
+                Console.ReadKey();
+            }
+
+            while (true)
+            {
             //Console.Clear();
             Console.WriteLine("╔════════════════════════════════════════════════╗");
             Console.WriteLine("║              Philosophix CLI v2.0              ║");
@@ -51,9 +65,9 @@ class Program
                     break;
                 case "6":
                     await VoirAnnotationsAsync(dbService, annotationService);
-                    break;
-                case "7":
-                    openAiService.CostTracker.Reset();
+                    break;                case "7":
+                    llmService.CostTracker?.Reset();
+                    Console.WriteLine("💰 Compteur de coûts réinitialisé");
                     break;
                 case "8":
                     Console.WriteLine("Au revoir !");
@@ -66,6 +80,14 @@ class Program
                 Console.WriteLine("\nAppuyez sur une touche pour continuer...");
                 Console.ReadKey();
             }
+        } // Fermeture du while
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Erreur fatale : {ex.Message}");
+            Console.WriteLine("Vérifiez votre configuration dans appsettings.json");
+            Console.WriteLine("Appuyez sur une touche pour quitter...");
+            Console.ReadKey();
         }
     }
 
@@ -327,17 +349,16 @@ class Program
                 Console.WriteLine("Correction introuvable.");
             }
         }
-    }
-
-    /// <summary>
+    }    /// <summary>
     /// Génère des annotations pour une correction donnée
     /// </summary>
     static async Task GenererAnnotationsPourCorrection(Correction correction, Devoir devoir)
-    {        try
+    {
+        try
         {
-            var openAiService = new OpenAiService();
+            var llmService = LLMServiceFactory.CreateService();
             var dbService = new JsonDatabaseService("devoirs.json");
-            var annotationService = new AnnotationService(openAiService, dbService);
+            var annotationService = new AnnotationService(llmService, dbService);
 
             Console.WriteLine("\n" + new string('═', 60));
             Console.WriteLine("🔍 GÉNÉRATION D'ANNOTATIONS AUTOMATIQUES");
@@ -496,7 +517,6 @@ class Program
             else
             {
                 Console.WriteLine("Correction introuvable.");
-            }
-        }
+            }        }
     }
 }
