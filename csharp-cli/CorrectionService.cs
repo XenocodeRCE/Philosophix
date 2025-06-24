@@ -132,12 +132,13 @@ public class CorrectionService
          /// Évalue une compétence spécifique
          /// </summary>
     private async Task<EvaluationCompetence> EvaluerCompetenceAsync(Competence competence, string copie, string enonce, string typeDevoir, string TypeBac, bool aPAP = false)
-    {
-        var system = $@"Vous êtes un correcteur de philosophie qui évalue selon les standards RÉELS du bac {TypeBac}.
+    {        var system = $@"Vous êtes un correcteur de philosophie qui évalue selon les standards RÉELS du bac {TypeBac}.
         
         ATTENTION : Cette copie doit être notée de manière DIFFÉRENCIÉE et RÉALISTE.
 - Ne donnez PAS la même note à toutes les compétences
-- Utilisez toute l'échelle de notation : 6-20/20";
+- Utilisez toute l'échelle de notation : 6-20/20
+
+IMPORTANT : Vous DEVEZ répondre uniquement avec un objet JSON valide, sans texte supplémentaire avant ou après.";
 
         var messagePAP = aPAP ? "\n\nIMPORTANT : Cet élève dispose d'un PAP (Plan d'Accompagnement Personnalisé). Ne tenez pas compte de la qualité de l'orthographe, de la grammaire ou de l'expression écrite dans votre évaluation. Concentrez-vous uniquement sur le contenu philosophique et la réflexion." : "";
 
@@ -169,18 +170,18 @@ Formel, vouvoie l'apprenant.
 {copie}
 {messagePAP}{messageNiveau}
 
-Répondez UNIQUEMENT au format JSON suivant :
+Répondez UNIQUEMENT au format JSON suivant (pas de texte avant ou après) :
 {{
-    ""note"": <note sur 20>,
+    ""note"": <nombre entre 6 et 20>,
     ""analyse"": ""<analyse détaillée qui cite des éléments de la copie>"",
     ""points_forts"": [""point fort 1"", ""point fort 2"", ...],
     ""points_ameliorer"": [""point à améliorer 1"", ""point à améliorer 2"", ...]
 }}
 
 Évaluez UNIQUEMENT cette compétence, rien d'autre.
-Pour l'analyse, cites des éléments de la copie pour justifier ta note, et addresses-toi à l'élève directement.
+Pour l'analyse, citez des éléments de la copie pour justifier votre note, et adressez-vous à l'élève directement.
 
-{GetSeverite(TypeBac)}";        var response = await _llmService.AskAsync(system, prompt, $"Compétence: {competence.Nom}");
+{GetSeverite(TypeBac)}";var response = await _llmService.AskAsync(system, prompt, $"Compétence: {competence.Nom}");
         var evaluation = ParseEvaluationResponse(response);
 
         // Ajouter le nom de la compétence à l'évaluation
@@ -192,7 +193,7 @@ Pour l'analyse, cites des éléments de la copie pour justifier ta note, et addr
          /// </summary>
     private async Task<EvaluationFinaleApiResponse> EvaluerFinalAsync(List<EvaluationCompetence> evaluations, List<Competence> competences, string copie, string typeDevoir, string TypeBac, bool aPAP = false)
     {
-        var system = "Vous êtes un professeur de philosophie expérimenté qui corrige des rédactions.";
+        var system = "Vous êtes un professeur de philosophie expérimenté qui corrige des rédactions. Vous DEVEZ répondre uniquement avec un objet JSON valide, sans texte supplémentaire avant ou après.";
 
         var echelleNotation = GetEchelleNotation(typeDevoir);
         var messagePAP = aPAP ? "\n\nIMPORTANT : Cet élève dispose d'un PAP (Plan d'Accompagnement Personnalisé). Dans votre appréciation générale, ne tenez pas compte de la qualité de l'orthographe, de la grammaire ou de l'expression écrite. Concentrez-vous uniquement sur le contenu philosophique et la réflexion." : "";
@@ -225,15 +226,15 @@ Formelle, vouvoie l'apprenant.
 
 {echelleNotation}
 
-Répondez UNIQUEMENT au format JSON suivant :
+Répondez UNIQUEMENT au format JSON suivant (pas de texte avant ou après) :
 {{
     ""appreciation"": ""<appréciation générale détaillée>"",
     ""points_forts"": [""point fort 1"", ""point fort 2"", ""point fort 3""],
     ""points_ameliorer"": [""point 1"", ""point 2"", ""point 3""]
 }}
 
-Pour l'appreciation addresses-toi à l'élève directement.
-{GetSeverite(TypeBac)}";        var response = await _llmService.AskAsync(system, prompt, "Évaluation finale");
+Pour l'appréciation, adressez-vous à l'élève directement.
+{GetSeverite(TypeBac)}";var response = await _llmService.AskAsync(system, prompt, "Évaluation finale");
         return ParseEvaluationFinaleResponse(response);
     }
 
@@ -814,9 +815,7 @@ Pour l'appreciation addresses-toi à l'élève directement.
                 PointsAmeliorer = new List<string> { "Réessayer la correction" }
             };
         }
-    }
-
-    /// <summary>
+    }    /// <summary>
     /// Extrait le contenu du message depuis une réponse LLM (OpenAI ou Ollama)
     /// </summary>
     private string ExtraireContenuMessage(string response)
@@ -844,7 +843,22 @@ Pour l'appreciation addresses-toi à l'élève directement.
             {
                 if (ollamaMessage.TryGetProperty("content", out var ollamaContent))
                 {
-                    return ollamaContent.GetString() ?? "";
+                    var contentStr = ollamaContent.GetString() ?? "";
+                    
+                    // Si la réponse Ollama contient du texte non-JSON, essayer d'extraire le JSON
+                    if (!contentStr.Trim().StartsWith("{"))
+                    {
+                        // Chercher un bloc JSON dans la réponse
+                        var jsonStart = contentStr.IndexOf('{');
+                        var jsonEnd = contentStr.LastIndexOf('}');
+                        
+                        if (jsonStart >= 0 && jsonEnd > jsonStart)
+                        {
+                            contentStr = contentStr.Substring(jsonStart, jsonEnd - jsonStart + 1);
+                        }
+                    }
+                    
+                    return contentStr;
                 }
             }
 
@@ -852,7 +866,18 @@ Pour l'appreciation addresses-toi à l'élève directement.
             return response;
         }
         catch (JsonException)
-        {            // Si ce n'est pas du JSON, c'est peut-être déjà le contenu pur
+        {            
+            // Si ce n'est pas du JSON, c'est peut-être déjà le contenu pur
+            // Essayer d'extraire un JSON de la réponse texte
+            var responseText = response;
+            var jsonStart = responseText.IndexOf('{');
+            var jsonEnd = responseText.LastIndexOf('}');
+            
+            if (jsonStart >= 0 && jsonEnd > jsonStart)
+            {
+                return responseText.Substring(jsonStart, jsonEnd - jsonStart + 1);
+            }
+            
             return response;
         }
     }

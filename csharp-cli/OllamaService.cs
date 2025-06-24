@@ -12,11 +12,11 @@ using System.IO;
 /// Alternative gratuite et privée à OpenAI
 /// </summary>
 public class OllamaService : ILLMService
-{
-    private readonly HttpClient _httpClient;
+{    private readonly HttpClient _httpClient;
     private readonly string _baseUrl;
     private readonly string _model;
     private readonly double _temperature;
+    private readonly int _maxTokens;
 
     public CostCalculator? CostTracker => null; // Ollama est gratuit
     public string ServiceName => "Ollama";
@@ -25,12 +25,12 @@ public class OllamaService : ILLMService
     public OllamaService()
     {
         _httpClient = new HttpClient();
-        
-        // Lire la configuration depuis appsettings.json
+          // Lire la configuration depuis appsettings.json
         var config = LoadConfiguration();
         _baseUrl = config.Ollama.BaseUrl;
         _model = config.Ollama.Model;
         _temperature = config.Ollama.Temperature;
+        _maxTokens = config.Ollama.MaxTokens;
         
         // Timeout plus long pour les modèles locaux qui peuvent être plus lents
         _httpClient.Timeout = TimeSpan.FromMinutes(5);
@@ -71,9 +71,7 @@ public class OllamaService : ILLMService
     {
         try
         {
-            Console.WriteLine($"📡 {operationType} - Envoi vers Ollama ({_model})...");
-            
-            var requestBody = new
+            Console.WriteLine($"📡 {operationType} - Envoi vers Ollama ({_model})...");              var requestBody = new
             {
                 model = _model,
                 messages = new[]
@@ -82,10 +80,11 @@ public class OllamaService : ILLMService
                     new { role = "user", content = userPrompt }
                 },
                 stream = false,
+                format = "json", // Force la sortie JSON
                 options = new
                 {
                     temperature = _temperature,
-                    num_predict = 8000 // Équivalent à MaxTokens
+                    num_predict = _maxTokens // Utilise la configuration
                 }
             };
 
@@ -144,4 +143,5 @@ public class OllamaSettings
     public string BaseUrl { get; set; } = "http://localhost:11434";
     public string Model { get; set; } = "llama3.1:8b";
     public double Temperature { get; set; } = 1.0;
+    public int MaxTokens { get; set; } = 8000;
 }
