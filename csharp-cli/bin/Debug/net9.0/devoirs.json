@@ -378,5 +378,81 @@
     },
     "type": "dissertation",
     "type_bac": "g\u00E9n\u00E9ral"
+  },
+  {
+    "id": 6,
+    "titre": "bac gen sujet 1",
+    "enonce": "Notre avenir d\u00E9pend-t-il de la technique ?",
+    "contenu": "n/a",
+    "date_creation": "2025-06-24T14:16:30.9889903+02:00",
+    "bareme": {
+      "competences": [
+        {
+          "id": 1,
+          "nom": "Compr\u00E9hension et analyse du sujet",
+          "criteres": [
+            "Identifier les termes cl\u00E9s d\u0027un sujet",
+            "Reformuler le sujet avec ses propres mots",
+            "Formuler une probl\u00E9matique pertinente"
+          ]
+        },
+        {
+          "id": 2,
+          "nom": "\u00C9laboration d\u0027un plan structur\u00E9",
+          "criteres": [
+            "Organiser ses id\u00E9es de mani\u00E8re logique",
+            "Conna\u00EEtre les diff\u00E9rents types de plans",
+            "Annoncer clairement son plan dans l\u0027introduction"
+          ]
+        },
+        {
+          "id": 3,
+          "nom": "R\u00E9daction de l\u0027introduction et de la conclusion",
+          "criteres": [
+            "R\u00E9diger une accroche efficace",
+            "Ma\u00EEtriser les \u00E9tapes cl\u00E9s de l\u0027introduction",
+            "Synth\u00E9tiser et ouvrir la r\u00E9flexion"
+          ]
+        },
+        {
+          "id": 4,
+          "nom": "D\u00E9veloppement de l\u0027argumentation",
+          "criteres": [
+            "Construire des paragraphes argumentatifs",
+            "Utiliser des exemples pertinents",
+            "Int\u00E9grer des r\u00E9f\u00E9rences"
+          ]
+        },
+        {
+          "id": 5,
+          "nom": "Ma\u00EEtrise de la langue fran\u00E7aise",
+          "criteres": [
+            "Orthographe et grammaire",
+            "Vocabulaire sp\u00E9cifique",
+            "Fluidit\u00E9 de la syntaxe"
+          ]
+        },
+        {
+          "id": 6,
+          "nom": "Coh\u00E9rence et coh\u00E9sion textuelle",
+          "criteres": [
+            "Utiliser des connecteurs logiques",
+            "Assurer la coh\u00E9rence entre les parties",
+            "Contribuer \u00E0 la probl\u00E9matique"
+          ]
+        },
+        {
+          "id": 7,
+          "nom": "Esprit critique et r\u00E9flexion personnelle",
+          "criteres": [
+            "Prise de position argument\u00E9e",
+            "\u00C9valuer les arguments",
+            "R\u00E9flexion personnelle"
+          ]
+        }
+      ]
+    },
+    "type": "dissertation",
+    "type_bac": "g\u00E9n\u00E9ral"
   }
 ]

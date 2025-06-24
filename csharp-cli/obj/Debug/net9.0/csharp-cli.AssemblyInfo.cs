@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("csharp-cli")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+e46551bbf7145c7870a288db2d3045f393ef8e18")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+c104e95388958e19bc4475a69e859a3e054bd804")]
 [assembly: System.Reflection.AssemblyProductAttribute("csharp-cli")]
 [assembly: System.Reflection.AssemblyTitleAttribute("csharp-cli")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
