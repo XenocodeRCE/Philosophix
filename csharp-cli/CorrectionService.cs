@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Text;
 using System.Text.Json;
+using System.Threading;
 
 public class CorrectionService
 {
@@ -43,6 +44,18 @@ public class CorrectionService
         Console.WriteLine("\n" + new string('═', 60));
         Console.WriteLine("🤖 CORRECTION EN COURS...");
         Console.WriteLine(new string('═', 60));
+
+        // Analyse linguistique de la copie
+        var (nombreMots, motsUniques, richesseVocabulaire, motsPlusFrequents) = AnalyserMetriquesLinguistiques(copie);
+        var mtld = CalculerMTLD(copie);
+        var analyseLinguistique = InterpreterMTLD(mtld, nombreMots, devoir.Type ?? "dissertation", devoir.TypeBac ?? "général");
+        
+        Console.WriteLine($"📊 ANALYSE LINGUISTIQUE :");
+        Console.WriteLine($"   • Longueur : {nombreMots} mots ({motsUniques} uniques, {richesseVocabulaire:F1}% de richesse)");
+        var qualiteMTLD = mtld >= 50 ? "excellent" : mtld >= 40 ? "très bon" : mtld >= 30 ? "correct" : mtld >= 20 ? "faible" : "très faible";
+        Console.WriteLine($"   • Diversité lexicale (MTLD) : {mtld:F1} ({qualiteMTLD})");
+        Console.WriteLine($"   • Mots les plus fréquents : {string.Join(", ", motsPlusFrequents.Take(5))}");
+        Console.WriteLine();
 
         var competences = devoir.Bareme?.Competences ?? new List<Competence>();
         // Filtrer les compétences si PAP (exclure la compétence "Maîtrise de la langue française" ou "Expression et rédaction")
@@ -116,7 +129,7 @@ public class CorrectionService
             Id = newId,
             DevoirId = devoir.Id,
             Note = (decimal)noteMoyenne,
-            Appreciation = evaluationFinale.Appreciation,
+            Appreciation = evaluationFinale.Appreciation + $"\n\n[Analyse linguistique MTLD: {analyseLinguistique}]",
             PointsForts = evaluationFinale.PointsForts,
             PointsAmeliorer = evaluationFinale.PointsAmeliorer,
             Competences = evaluations,
@@ -523,6 +536,38 @@ Pour l'appréciation, adressez-vous à l'élève directement.
         Console.WriteLine($"\n🎯 NOTE FINALE : {correction.Note:F1}/20");
         Console.WriteLine($"📅 Date de correction : {correction.DateCorrection:dd/MM/yyyy HH:mm}");
 
+        // Afficher les métriques linguistiques si disponibles dans l'appréciation
+        if (correction.Copie != null)
+        {
+            var (nombreMots, motsUniques, richesseVocabulaire, motsPlusFrequents) = AnalyserMetriquesLinguistiquesStatic(correction.Copie);
+            var mtld = CalculerMTLDStatic(correction.Copie);
+            
+            Console.WriteLine("\n" + new string('═', 60));
+            Console.WriteLine("📊 MÉTRIQUES LINGUISTIQUES");
+            Console.WriteLine(new string('═', 60));
+            Console.WriteLine($"📝 Longueur : {nombreMots} mots ({motsUniques} uniques, {richesseVocabulaire:F1}% de richesse)");
+            Console.WriteLine($"� Mots les plus utilisés : {string.Join(", ", motsPlusFrequents.Take(8))}");
+            Console.WriteLine($"🎯 Diversité lexicale (MTLD) : {mtld:F1}");
+            
+            // Afficher l'interprétation MTLD si elle a été stockée dans l'appréciation
+            if (correction.Appreciation?.Contains("[Analyse linguistique MTLD:") == true)
+            {
+                var startIndex = correction.Appreciation.IndexOf("[Analyse linguistique MTLD:") + "[Analyse linguistique MTLD:".Length;
+                var endIndex = correction.Appreciation.IndexOf("]", startIndex);
+                if (endIndex > startIndex)
+                {
+                    var analyseMTLD = correction.Appreciation.Substring(startIndex, endIndex - startIndex).Trim();
+                    Console.WriteLine($"🎓 Interprétation pédagogique : {analyseMTLD}");
+                }
+            }
+            else
+            {
+                // Calculer l'interprétation MTLD si elle n'est pas stockée
+                var interpretationMTLD = InterpreterMTLDStatic(mtld, nombreMots, "dissertation", "général");
+                Console.WriteLine($"🎓 Interprétation pédagogique : {interpretationMTLD}");
+            }
+        }
+
         Console.WriteLine("\n" + new string('═', 60));
         Console.WriteLine("💬 APPRÉCIATION GÉNÉRALE");
         Console.WriteLine(new string('═', 60));
@@ -880,7 +925,706 @@ Pour l'appréciation, adressez-vous à l'élève directement.
             
             return response;
         }
+    }    /// <summary>
+    /// Lance le processus de correction avec consensus (multi-évaluations)
+    /// </summary>
+    public async Task<Correction> CorrigerCopieAvecConsensusAsync(Devoir devoir, string copie, int nombreEvaluations = 20, int maxParallelism = 5, bool aPAP = false)
+    {
+        Console.WriteLine("\n" + new string('═', 60));
+        Console.WriteLine($"🤖 CORRECTION AVEC CONSENSUS ({nombreEvaluations} évaluations par compétence)");
+        Console.WriteLine("🏛️  Simulation d'une commission d'harmonisation");
+        Console.WriteLine(new string('═', 60));
+
+        // Analyse linguistique de la copie
+        var (nombreMots, motsUniques, richesseVocabulaire, motsPlusFrequents) = AnalyserMetriquesLinguistiques(copie);
+        var mtld = CalculerMTLD(copie);
+        var analyseLinguistique = InterpreterMTLD(mtld, nombreMots, devoir.Type ?? "dissertation", devoir.TypeBac ?? "général");
+        
+        Console.WriteLine($"📊 ANALYSE LINGUISTIQUE :");
+        Console.WriteLine($"   • Longueur : {nombreMots} mots ({motsUniques} uniques, {richesseVocabulaire:F1}% de richesse)");
+        var qualiteMTLD = mtld >= 50 ? "excellent" : mtld >= 40 ? "très bon" : mtld >= 30 ? "correct" : mtld >= 20 ? "faible" : "très faible";
+        Console.WriteLine($"   • Diversité lexicale (MTLD) : {mtld:F1} ({qualiteMTLD})");
+        Console.WriteLine($"   • Mots les plus fréquents : {string.Join(", ", motsPlusFrequents.Take(5))}");
+        Console.WriteLine();
+
+        var competences = devoir.Bareme?.Competences ?? new List<Competence>();
+        
+        // Filtrer les compétences si PAP
+        if (aPAP)
+        {
+            Console.WriteLine("ℹ️  PAP activé : Les compétences d'expression ne seront pas évaluées.");
+            if (devoir.Type?.ToLower() == "explication")
+            {
+                competences = competences.Where(c => c.Nom != "Expression et rédaction").ToList();
+            }
+            else
+            {
+                competences = competences.Where(c => c.Nom != "Maîtrise de la langue française").ToList();
+            }
+        }
+
+        var evaluationsFinales = new List<EvaluationCompetence>();
+
+        // Évaluation par compétence avec consensus
+        for (int i = 0; i < competences.Count; i++)
+        {
+            var competence = competences[i];
+            Console.WriteLine($"\n📋 Consensus pour la compétence {i + 1}/{competences.Count}:");
+            Console.WriteLine($"   {competence.Nom}");            // Générer N corrections pour cette compétence EN PARALLÈLE
+            var evaluationsMultiples = new List<EvaluationCompetence>();
+            var startTime = DateTime.Now;
+            
+            // Configuration du parallélisme
+            var semaphore = new SemaphoreSlim(maxParallelism, maxParallelism);
+            var tasks = new List<Task<EvaluationCompetence>>();
+            var progressCounter = 0;
+            
+            Console.Write($"\r   📊 Démarrage de {nombreEvaluations} évaluations parallèles (max {maxParallelism} simultanées)");
+            
+            // Créer toutes les tâches
+            for (int j = 0; j < nombreEvaluations; j++)
+            {
+                tasks.Add(EvaluerCompetenceAvecSemaphoreAsync(competence, copie, devoir.Enonce ?? "", devoir.Type ?? "dissertation", devoir.TypeBac ?? "général", aPAP, semaphore, () =>
+                {
+                    var current = Interlocked.Increment(ref progressCounter);
+                    if (current % 10 == 0 || current == nombreEvaluations)
+                    {
+                        Console.Write($"\r   📊 Progression: {current}/{nombreEvaluations} évaluations terminées");
+                    }
+                }));
+            }
+            
+            // Attendre que toutes les tâches se terminent
+            var resultats = await Task.WhenAll(tasks);
+            evaluationsMultiples.AddRange(resultats);
+            
+            var endTime = DateTime.Now;
+            var duration = endTime - startTime;
+              // Calculer le consensus
+            var consensus = CalculerConsensus(evaluationsMultiples, competence.Nom ?? "Compétence sans nom");
+            evaluationsFinales.Add(consensus);
+            
+            // Afficher les statistiques
+            var notes = evaluationsMultiples.Select(e => e.Note).ToList();
+            var ecartType = CalculerEcartTypeNotes(notes);
+            var noteMin = notes.Min();
+            var noteMax = notes.Max();
+            var mediane = CalculerMediane(notes);
+            
+            Console.WriteLine($"\r   ✅ Consensus: {consensus.Note:F1}/20");
+            Console.WriteLine($"      📊 Min: {noteMin:F1} | Max: {noteMax:F1} | Médiane: {mediane:F1} | Écart-type: {ecartType:F2}");
+            Console.WriteLine($"      ⏱️  Temps: {duration.TotalSeconds:F1}s");
+        }
+
+        // Évaluation finale
+        Console.WriteLine("\n🎯 Génération de l'évaluation finale...");
+        var evaluationFinale = await EvaluerFinalAsync(evaluationsFinales, competences, copie, devoir.Type ?? "dissertation", devoir.TypeBac ?? "général", aPAP);
+
+        // Afficher le résumé des coûts
+        Console.WriteLine("\n" + new string('─', 60));
+        _llmService.CostTracker?.DisplayCostSummary();
+
+        // Calcul de la note moyenne avec pondération
+        var notesFinales = evaluationsFinales.Select(e => e.Note).ToList();
+        var notesFinalesDouble = notesFinales.Select(n => Convert.ToDouble(n)).ToList();
+        var noteMoyenne = AppliquerPonderation(notesFinalesDouble, devoir.TypeBac ?? "général", evaluationsFinales, devoir.Type ?? "dissertation");
+
+        // Affichage des statistiques finales
+        Console.WriteLine($"\n📊 STATISTIQUES FINALES :");
+        Console.WriteLine($"   • Note moyenne des compétences : {evaluationsFinales.Average(e => e.Note):F1}/20");
+        Console.WriteLine($"   • Note finale après pondération : {noteMoyenne:F1}/20");
+        Console.WriteLine($"   • Écart-type des notes finales : {CalculerEcartTypeNotes(notesFinales):F2}");
+
+        // Création de la correction
+        var corrections = await _dbService.LireCorrectionsAsync();
+        var newId = corrections.Count > 0 ? corrections.Max(c => c.Id) + 1 : 1;
+
+        var correction = new Correction
+        {
+            Id = newId,
+            DevoirId = devoir.Id,
+            Note = (decimal)noteMoyenne,
+            Appreciation = evaluationFinale.Appreciation + $"\n\n[Analyse linguistique MTLD: {analyseLinguistique}]" + $"\n\n[Note : Cette correction a été réalisée avec un consensus de {nombreEvaluations} évaluations par compétence pour garantir une notation équitable et harmonisée.]",
+            PointsForts = evaluationFinale.PointsForts,
+            PointsAmeliorer = evaluationFinale.PointsAmeliorer,
+            Competences = evaluationsFinales,
+            Copie = copie,
+            DateCorrection = DateTime.Now
+        };
+
+        corrections.Add(correction);
+        await _dbService.SauvegarderCorrectionsAsync(corrections);
+
+        return correction;
     }
 
-    // ...existing code...
+    /// <summary>
+    /// Évalue une compétence avec gestion du parallélisme via semaphore
+    /// </summary>
+    private async Task<EvaluationCompetence> EvaluerCompetenceAvecSemaphoreAsync(
+        Competence competence, string copie, string enonce, string typeDevoir, string TypeBac, 
+        bool aPAP, SemaphoreSlim semaphore, Action? onCompleted = null)
+    {
+        await semaphore.WaitAsync();
+        try
+        {
+            var evaluation = await EvaluerCompetenceAsync(competence, copie, enonce, typeDevoir, TypeBac, aPAP);
+            onCompleted?.Invoke();
+            return evaluation;
+        }
+        finally
+        {
+            semaphore.Release();
+        }
+    }
+
+    /// <summary>
+    /// Calcule le consensus à partir de multiples évaluations d'une compétence
+    /// </summary>
+    private EvaluationCompetence CalculerConsensus(List<EvaluationCompetence> evaluations, string nomCompetence)
+    {
+        var notes = evaluations.Select(e => e.Note).ToList();
+        
+        // Éliminer les outliers (méthode IQR)
+        var notesFiltrees = EliminerOutliers(notes);
+        
+        return new EvaluationCompetence
+        {
+            Nom = nomCompetence,
+            Note = notesFiltrees.Count > 0 ? notesFiltrees.Average() : notes.Average(),
+            Analyse = SynthetiserAnalyses(evaluations),
+            PointsForts = ExtrairePointsRecurrents(evaluations.SelectMany(e => e.PointsForts ?? new List<string>())),
+            PointsAmeliorer = ExtrairePointsRecurrents(evaluations.SelectMany(e => e.PointsAmeliorer ?? new List<string>()))
+        };
+    }
+
+    /// <summary>
+    /// Élimine les outliers en utilisant la méthode IQR (Interquartile Range)
+    /// </summary>
+    private List<decimal> EliminerOutliers(List<decimal> notes)
+    {
+        if (notes.Count < 4) return notes; // Pas assez de données pour éliminer des outliers
+        
+        var sorted = notes.OrderBy(n => n).ToList();
+        var q1Index = (int)(sorted.Count * 0.25);
+        var q3Index = (int)(sorted.Count * 0.75);
+        
+        var q1 = sorted[q1Index];
+        var q3 = sorted[q3Index];
+        var iqr = q3 - q1;
+        var lowerBound = q1 - 1.5m * iqr;
+        var upperBound = q3 + 1.5m * iqr;
+        
+        var filtrees = sorted.Where(n => n >= lowerBound && n <= upperBound).ToList();
+        
+        // Si on élimine plus de 20% des données, on garde toutes les données
+        if (filtrees.Count < notes.Count * 0.8)
+        {
+            return notes;
+        }
+        
+        return filtrees;
+    }
+
+    /// <summary>
+    /// Synthétise les analyses de multiples évaluations en une analyse consensus
+    /// </summary>
+    private string SynthetiserAnalyses(List<EvaluationCompetence> evaluations)
+    {
+        // Extraire les phrases les plus récurrentes
+        var toutesAnalyses = evaluations.Select(e => e.Analyse ?? "").ToList();
+        
+        // Pour l'instant, on prend l'analyse médiane en termes de longueur
+        // Dans une version plus avancée, on pourrait faire de l'analyse de sentiments
+        var analysesTriees = toutesAnalyses.OrderBy(a => a.Length).ToList();
+        var indexMedian = analysesTriees.Count / 2;
+        
+        var analyseBase = analysesTriees[indexMedian];
+        
+        return $"{analyseBase}\n\n[Cette analyse représente le consensus de {evaluations.Count} évaluations pour garantir l'objectivité.]";
+    }
+
+    /// <summary>
+    /// Extrait les points récurrents d'une liste de points
+    /// </summary>
+    private List<string> ExtrairePointsRecurrents(IEnumerable<string> points)
+    {
+        // Compter la fréquence des points similaires
+        var pointsFrequence = new Dictionary<string, int>();
+        
+        foreach (var point in points)
+        {
+            var pointNormalise = NormaliserTexte(point);
+            if (pointsFrequence.ContainsKey(pointNormalise))
+            {
+                pointsFrequence[pointNormalise]++;
+            }
+            else
+            {
+                pointsFrequence[pointNormalise] = 1;
+            }
+        }
+        
+        // Retourner les points qui apparaissent au moins 2 fois (pour éviter les points uniques)
+        var seuilMinimum = Math.Max(2, pointsFrequence.Count / 10); // Au moins 2, ou 10% des points
+        
+        return pointsFrequence
+            .Where(kv => kv.Value >= seuilMinimum)
+            .OrderByDescending(kv => kv.Value)
+            .Take(5) // Maximum 5 points
+            .Select(kv => kv.Key)
+            .ToList();
+    }
+
+    /// <summary>
+    /// Normalise un texte pour la comparaison (minuscules, suppression ponctuation, etc.)
+    /// </summary>
+    private string NormaliserTexte(string texte)
+    {
+        if (string.IsNullOrEmpty(texte)) return "";
+        
+        return texte.ToLower()
+                   .Replace(".", "")
+                   .Replace(",", "")
+                   .Replace("!", "")
+                   .Replace("?", "")
+                   .Replace(";", "")
+                   .Replace(":", "")
+                   .Trim();
+    }
+
+    /// <summary>
+    /// Calcule l'écart-type d'une liste de notes
+    /// </summary>
+    private double CalculerEcartTypeNotes(List<decimal> notes)
+    {
+        if (notes.Count <= 1) return 0;
+
+        var moyenne = notes.Average();
+        var variance = notes.Sum(x => Math.Pow((double)(x - moyenne), 2)) / notes.Count;
+        return Math.Sqrt(variance);
+    }
+
+    /// <summary>
+    /// Calcule la médiane d'une liste de notes
+    /// </summary>
+    private decimal CalculerMediane(List<decimal> notes)
+    {
+        var sorted = notes.OrderBy(n => n).ToList();
+        var count = sorted.Count;
+        
+        if (count % 2 == 0)
+        {
+            return (sorted[count / 2 - 1] + sorted[count / 2]) / 2;
+        }
+        else
+        {
+            return sorted[count / 2];
+        }
+    }
+
+    /// <summary>
+    /// Analyse les métriques linguistiques d'une copie
+    /// </summary>
+    private (int nombreMots, int motsUniques, double richesseVocabulaire, List<string> motsPlusFrequents) AnalyserMetriquesLinguistiques(string copie)
+    {
+        if (string.IsNullOrWhiteSpace(copie))
+            return (0, 0, 0, new List<string>());
+
+        // Nettoyer et diviser le texte en mots
+        var mots = copie
+            .ToLower()
+            .Split(new char[] { ' ', '\n', '\r', '\t', '.', ',', ';', ':', '!', '?', '"', '\'', '(', ')', '[', ']', '{', '}', '-', '—', '…' }, 
+                   StringSplitOptions.RemoveEmptyEntries)
+            .Where(mot => mot.Length > 2) // Ignorer les mots trop courts
+            .Where(mot => !EstMotVideStatic(mot)) // Ignorer les mots vides
+            .ToList();
+
+        var nombreMots = mots.Count;
+        var motsUniques = mots.Distinct().Count();
+        var richesseVocabulaire = nombreMots > 0 ? (double)motsUniques / nombreMots * 100 : 0;
+
+        // Analyser la fréquence des mots
+        var frequenceMots = mots
+            .GroupBy(mot => mot)
+            .OrderByDescending(g => g.Count())
+            .Take(10)
+            .Select(g => $"{g.Key} ({g.Count()})")
+            .ToList();
+
+        return (nombreMots, motsUniques, richesseVocabulaire, frequenceMots);
+    }
+
+    /// <summary>
+    /// Analyse les métriques linguistiques d'une copie (version publique statique)
+    /// </summary>
+    public static (int nombreMots, int motsUniques, double richesseVocabulaire, List<string> motsPlusFrequents) AnalyserMetriquesLinguistiquesStatic(string copie)
+    {
+        if (string.IsNullOrWhiteSpace(copie))
+            return (0, 0, 0, new List<string>());
+
+        // Nettoyer et diviser le texte en mots
+        var mots = copie
+            .ToLower()
+            .Split(new char[] { ' ', '\n', '\r', '\t', '.', ',', ';', ':', '!', '?', '"', '\'', '(', ')', '[', ']', '{', '}', '-', '—', '…' }, 
+                   StringSplitOptions.RemoveEmptyEntries)
+            .Where(mot => mot.Length > 2) // Ignorer les mots trop courts
+            .Where(mot => !EstMotVideStatic(mot)) // Ignorer les mots vides
+            .ToList();
+
+        var nombreMots = mots.Count;
+        var motsUniques = mots.Distinct().Count();
+        var richesseVocabulaire = nombreMots > 0 ? (double)motsUniques / nombreMots * 100 : 0;
+
+        // Analyser la fréquence des mots
+        var frequenceMots = mots
+            .GroupBy(mot => mot)
+            .OrderByDescending(g => g.Count())
+            .Take(10)
+            .Select(g => $"{g.Key} ({g.Count()})")
+            .ToList();
+
+        return (nombreMots, motsUniques, richesseVocabulaire, frequenceMots);
+    }
+
+    /// <summary>
+    /// Détermine si un mot est un mot vide (version statique)
+    /// </summary>
+    private static bool EstMotVideStatic(string mot)
+    {
+        var motsVides = new HashSet<string>
+        {
+            "le", "la", "les", "un", "une", "des", "du", "de", "d'", "et", "ou", "où", "est", "sont", "était", "étaient",
+            "a", "ai", "as", "ont", "avait", "avaient", "aura", "auront", "sera", "seront", "serait", "seraient",
+            "ce", "cette", "ces", "cet", "se", "s'", "si", "sa", "son", "ses", "leur", "leurs", "notre", "nos", "votre", "vos",
+            "je", "tu", "il", "elle", "nous", "vous", "ils", "elles", "me", "te", "lui", "nous", "vous", "leur",
+            "que", "qui", "quoi", "dont", "lequel", "laquelle", "lesquels", "lesquelles",
+            "dans", "sur", "sous", "avec", "sans", "pour", "par", "vers", "chez", "entre", "parmi", "selon", "malgré",
+            "mais", "car", "donc", "or", "ni", "cependant", "néanmoins", "toutefois", "pourtant", "ainsi", "alors", "aussi",
+            "très", "plus", "moins", "assez", "trop", "bien", "mal", "mieux", "beaucoup", "peu", "tant", "autant",
+            "ici", "là", "hier", "aujourd'hui", "demain", "maintenant", "déjà", "encore", "toujours", "jamais", "parfois"
+        };
+
+        return motsVides.Contains(mot);
+    }
+
+    /// <summary>
+    /// Évalue la qualité linguistique d'une copie (version statique)
+    /// </summary>
+    public static string EvaluerQualiteLinguistiqueStatic(int nombreMots, double richesseVocabulaire)
+    {
+        string evaluationLongueur;
+        string evaluationRichesse;
+
+        // Évaluation de la longueur
+        if (nombreMots < 300)
+            evaluationLongueur = "très courte";
+        else if (nombreMots < 500)
+            evaluationLongueur = "courte";
+        else if (nombreMots < 800)
+            evaluationLongueur = "correcte";
+        else if (nombreMots < 1200)
+            evaluationLongueur = "développée";
+        else
+            evaluationLongueur = "très développée";
+
+        // Évaluation de la richesse vocabulaire
+        if (richesseVocabulaire < 30)
+            evaluationRichesse = "vocabulaire limité";
+        else if (richesseVocabulaire < 40)
+            evaluationRichesse = "vocabulaire correct";
+        else if (richesseVocabulaire < 50)
+            evaluationRichesse = "vocabulaire riche";
+        else if (richesseVocabulaire < 60)
+            evaluationRichesse = "vocabulaire très riche";
+        else
+            evaluationRichesse = "vocabulaire exceptionnel";
+
+        return $"Copie {evaluationLongueur} ({nombreMots} mots) avec un {evaluationRichesse} ({richesseVocabulaire:F1}% de mots uniques)";
+    }
+
+    /// <summary>
+    /// Analyse les métriques linguistiques avec l'aide du LLM pour une interprétation pédagogique
+    /// </summary>
+    /// <summary>
+    /// Calcule le MTLD (Measure of Textural Lexical Diversity) d'un texte
+    /// </summary>
+    private double CalculerMTLD(string copie, double seuil = 0.72)
+    {
+        if (string.IsNullOrWhiteSpace(copie))
+            return 0;
+
+        // Nettoyer et diviser le texte en mots
+        var mots = copie
+            .ToLower()
+            .Split(new char[] { ' ', '\n', '\r', '\t', '.', ',', ';', ':', '!', '?', '"', '\'', '(', ')', '[', ']', '{', '}', '-', '—', '…' }, 
+                   StringSplitOptions.RemoveEmptyEntries)
+            .Where(mot => mot.Length > 2)
+            .Where(mot => !EstMotVide(mot))
+            .ToList();
+
+        if (mots.Count < 10) return 0; // Trop peu de mots pour calculer le MTLD
+
+        // Analyse de gauche à droite
+        var segmentsGaucheDroite = CalculerSegmentsMTLD(mots, seuil);
+        
+        // Analyse de droite à gauche
+        var motsInverses = mots.ToList();
+        motsInverses.Reverse();
+        var segmentsDroiteGauche = CalculerSegmentsMTLD(motsInverses, seuil);
+
+        // Calcul du MTLD final (moyenne des deux directions)
+        var mtldGaucheDroite = segmentsGaucheDroite.Count > 0 ? segmentsGaucheDroite.Average() : 0;
+        var mtldDroiteGauche = segmentsDroiteGauche.Count > 0 ? segmentsDroiteGauche.Average() : 0;
+
+        return (mtldGaucheDroite + mtldDroiteGauche) / 2.0;
+    }
+
+    /// <summary>
+    /// Calcule les segments MTLD pour une direction donnée
+    /// </summary>
+    private List<int> CalculerSegmentsMTLD(List<string> mots, double seuil)
+    {
+        var segments = new List<int>();
+        var motsVus = new HashSet<string>();
+        var indexDebut = 0;
+
+        for (int i = 0; i < mots.Count; i++)
+        {
+            motsVus.Add(mots[i]);
+            var ttr = (double)motsVus.Count / (i - indexDebut + 1);
+
+            if (ttr < seuil)
+            {
+                // Fin d'un segment
+                segments.Add(i - indexDebut + 1);
+                motsVus.Clear();
+                indexDebut = i + 1;
+            }
+        }
+
+        // Ajouter le dernier segment partiel s'il y en a un
+        if (indexDebut < mots.Count)
+        {
+            var dernierSegment = mots.Count - indexDebut;
+            if (dernierSegment > 5) // Seulement si le segment est assez long
+            {
+                segments.Add(dernierSegment);
+            }
+        }
+
+        return segments;
+    }
+
+    /// <summary>
+    /// Version statique du calcul MTLD
+    /// </summary>
+    public static double CalculerMTLDStatic(string copie, double seuil = 0.72)
+    {
+        if (string.IsNullOrWhiteSpace(copie))
+            return 0;
+
+        // Nettoyer et diviser le texte en mots
+        var mots = copie
+            .ToLower()
+            .Split(new char[] { ' ', '\n', '\r', '\t', '.', ',', ';', ':', '!', '?', '"', '\'', '(', ')', '[', ']', '{', '}', '-', '—', '…' }, 
+                   StringSplitOptions.RemoveEmptyEntries)
+            .Where(mot => mot.Length > 2)
+            .Where(mot => !EstMotVideStatic(mot))
+            .ToList();
+
+        if (mots.Count < 10) return 0;
+
+        // Analyse de gauche à droite
+        var segmentsGaucheDroite = CalculerSegmentsMTLDStatic(mots, seuil);
+        
+        // Analyse de droite à gauche
+        var motsInverses = mots.ToList();
+        motsInverses.Reverse();
+        var segmentsDroiteGauche = CalculerSegmentsMTLDStatic(motsInverses, seuil);
+
+        var mtldGaucheDroite = segmentsGaucheDroite.Count > 0 ? segmentsGaucheDroite.Average() : 0;
+        var mtldDroiteGauche = segmentsDroiteGauche.Count > 0 ? segmentsDroiteGauche.Average() : 0;
+
+        return (mtldGaucheDroite + mtldDroiteGauche) / 2.0;
+    }
+
+    /// <summary>
+    /// Version statique du calcul des segments MTLD
+    /// </summary>
+    private static List<int> CalculerSegmentsMTLDStatic(List<string> mots, double seuil)
+    {
+        var segments = new List<int>();
+        var motsVus = new HashSet<string>();
+        var indexDebut = 0;
+
+        for (int i = 0; i < mots.Count; i++)
+        {
+            motsVus.Add(mots[i]);
+            var ttr = (double)motsVus.Count / (i - indexDebut + 1);
+
+            if (ttr < seuil)
+            {
+                segments.Add(i - indexDebut + 1);
+                motsVus.Clear();
+                indexDebut = i + 1;
+            }
+        }
+
+        if (indexDebut < mots.Count)
+        {
+            var dernierSegment = mots.Count - indexDebut;
+            if (dernierSegment > 5)
+            {
+                segments.Add(dernierSegment);
+            }
+        }
+
+        return segments;
+    }
+
+    /// <summary>
+    /// Version statique de l'analyse linguistique avec LLM (pour l'affichage des résultats)
+    /// </summary>
+    public static async Task<string> AnalyserMetriquesAvecLLMStaticAsync(ILLMService llmService, int nombreMots, double richesseVocabulaire, List<string> motsPlusFrequents, string typeDevoir, string typeBac)
+    {
+        var system = @"Vous êtes un professeur de philosophie expérimenté qui analyse les métriques linguistiques des copies d'élèves du baccalauréat. 
+Votre rôle est d'interpréter les données quantitatives pour donner des conseils pédagogiques pertinents et constructifs.
+Répondez de manière concise et bienveillante, en vous adressant directement à l'élève (vouvoiement).";
+
+        var motsPlusFrequentsText = string.Join(", ", motsPlusFrequents.Take(8));
+        var niveauAttendu = typeBac == "technologique" ? "bac technologique" : "bac général";
+        
+        var prompt = $@"Analysez ces métriques linguistiques d'une copie de {typeDevoir} de {niveauAttendu} :
+
+📊 DONNÉES :
+- Nombre de mots : {nombreMots}
+- Richesse du vocabulaire : {richesseVocabulaire:F1}% de mots uniques
+- Mots les plus fréquents : {motsPlusFrequentsText}
+
+CONTEXTE :
+- Type de devoir : {typeDevoir}
+- Niveau : {niveauAttendu}
+
+Donnez une analyse pédagogique en 2-3 phrases maximum qui :
+1. Évalue la longueur par rapport aux attentes du bac
+2. Commente la richesse vocabulaire (attention aux répétitions)
+3. Identifie si les mots fréquents révèlent une bonne maîtrise du sujet
+4. Donne un conseil constructif si nécessaire
+
+Soyez bienveillant mais précis. Répondez directement sans préambule.";
+
+        try
+        {
+            var response = await llmService.AskAsync(system, prompt, "Analyse linguistique");
+            
+            // Extraire le contenu du message
+            string analyseLLM = "";
+            try
+            {
+                using var document = JsonDocument.Parse(response);
+                var root = document.RootElement;
+
+                // Format OpenAI
+                if (root.TryGetProperty("choices", out var choices) && choices.GetArrayLength() > 0)
+                {
+                    var firstChoice = choices[0];
+                    if (firstChoice.TryGetProperty("message", out var message))
+                    {
+                        if (message.TryGetProperty("content", out var content))
+                        {
+                            analyseLLM = content.GetString() ?? "";
+                        }
+                    }
+                }
+
+                // Format Ollama
+                if (string.IsNullOrEmpty(analyseLLM) && root.TryGetProperty("message", out var ollamaMessage))
+                {
+                    if (ollamaMessage.TryGetProperty("content", out var ollamaContent))
+                    {
+                        analyseLLM = ollamaContent.GetString() ?? "";
+                    }
+                }
+            }
+            catch (JsonException)
+            {
+                // Si ce n'est pas du JSON, c'est peut-être le contenu direct
+                analyseLLM = response;
+            }
+            
+            return analyseLLM?.Trim() ?? "Analyse linguistique non disponible.";
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"⚠️  Erreur lors de l'analyse linguistique LLM : {ex.Message}");
+
+            // Fallback vers l'analyse basique
+            return EvaluerQualiteLinguistiqueStatic(nombreMots, richesseVocabulaire);
+        }
+    }
+
+    /// <summary>
+    /// Détermine si un mot est un mot vide (version instance)
+    /// </summary>
+    /// <summary>
+    /// Interprète le score MTLD pour donner des conseils pédagogiques
+    /// </summary>
+    private string InterpreterMTLD(double mtld, int nombreMots, string typeDevoir, string typeBac)
+    {
+        return InterpreterMTLDStatic(mtld, nombreMots, typeDevoir, typeBac);
+    }
+
+    /// <summary>
+    /// Version statique de l'interprétation du score MTLD
+    /// </summary>
+    public static string InterpreterMTLDStatic(double mtld, int nombreMots, string typeDevoir, string typeBac)
+    {
+        string niveauAttendu = typeBac == "technologique" ? "bac technologique" : "bac général";
+        string contexte = typeDevoir == "explication" ? "explication de texte" : "dissertation philosophique";
+        
+        // Interprétation du score MTLD selon les standards académiques
+        string interpretation;
+        
+        if (mtld >= 50)
+        {
+            interpretation = "excellent";
+        }
+        else if (mtld >= 40)
+        {
+            interpretation = "très satisfaisant";
+        }
+        else if (mtld >= 30)
+        {
+            interpretation = "satisfaisant";
+        }
+        else if (mtld >= 20)
+        {
+            interpretation = "insuffisant";
+        }
+        else
+        {
+            interpretation = "très insuffisant";
+        }
+
+        return $"Diversité lexicale {interpretation} (MTLD: {mtld:F1}).";
+    }
+
+    private bool EstMotVide(string mot)
+    {
+        var motsVides = new HashSet<string>
+        {
+            "le", "la", "les", "un", "une", "des", "du", "de", "d'", "et", "ou", "où", "est", "sont", "était", "étaient",
+            "a", "ai", "as", "ont", "avait", "avaient", "aura", "auront", "sera", "seront", "serait", "seraient",
+            "ce", "cette", "ces", "cet", "se", "s'", "si", "sa", "son", "ses", "leur", "leurs", "notre", "nos", "votre", "vos",
+            "je", "tu", "il", "elle", "nous", "vous", "ils", "elles", "me", "te", "lui", "nous", "vous", "leur",
+            "que", "qui", "quoi", "dont", "lequel", "laquelle", "lesquels", "lesquelles",
+            "dans", "sur", "sous", "avec", "sans", "pour", "par", "vers", "chez", "entre", "parmi", "selon", "malgré",
+            "mais", "car", "donc", "or", "ni", "cependant", "néanmoins", "toutefois", "pourtant", "ainsi", "alors", "aussi",
+            "très", "plus", "moins", "assez", "trop", "bien", "mal", "mieux", "beaucoup", "peu", "tant", "autant",
+            "ici", "là", "hier", "aujourd'hui", "demain", "maintenant", "déjà", "encore", "toujours", "jamais", "parfois"
+        };
+
+        return motsVides.Contains(mot);
+    }
 }

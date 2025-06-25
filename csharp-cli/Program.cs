@@ -37,17 +37,16 @@ class Program
             Console.WriteLine();            Console.WriteLine("1. Créer un devoir");
             Console.WriteLine("2. Voir les devoirs");
             Console.WriteLine("3. Corriger une copie");
-            Console.WriteLine("4. Voir les corrections");
-            Console.WriteLine("5. Annoter une copie");
-            Console.WriteLine("6. Voir les annotations");
-            Console.WriteLine("7. Réinitialiser le compteur de coûts");
-            Console.WriteLine("8. Quitter");
+            Console.WriteLine("4. Corriger avec consensus (multi-évaluations)");
+            Console.WriteLine("5. Voir les corrections");
+            Console.WriteLine("6. Annoter une copie");
+            Console.WriteLine("7. Voir les annotations");
+            Console.WriteLine("8. Réinitialiser le compteur de coûts");
+            Console.WriteLine("9. Quitter");
             Console.WriteLine();
             Console.Write("Votre choix : ");
 
-            var choix = Console.ReadLine();
-
-            switch (choix)
+            var choix = Console.ReadLine();            switch (choix)
             {
                 case "1":
                     await CreerDevoirAsync(dbService);
@@ -58,24 +57,27 @@ class Program
                     await CorrigerCopieAsync(dbService, correctionService);
                     break;
                 case "4":
-                    await VoirCorrectionsAsync(dbService);
+                    await CorrigerCopieAvecConsensusAsync(dbService, correctionService);
                     break;
                 case "5":
-                    await AnnoterCopieAsync(dbService, annotationService);
+                    await VoirCorrectionsAsync(dbService);
                     break;
                 case "6":
+                    await AnnoterCopieAsync(dbService, annotationService);
+                    break;
+                case "7":
                     await VoirAnnotationsAsync(dbService, annotationService);
-                    break;                case "7":
+                    break;                case "8":
                     llmService.CostTracker?.Reset();
                     Console.WriteLine("💰 Compteur de coûts réinitialisé");
                     break;
-                case "8":
+                case "9":
                     Console.WriteLine("Au revoir !");
                     return;
                 default:
                     Console.WriteLine("Choix invalide.");
                     break;
-            }            if (choix != "8")
+            }            if (choix != "9")
             {
                 Console.WriteLine("\nAppuyez sur une touche pour continuer...");
                 Console.ReadKey();
@@ -304,6 +306,188 @@ class Program
         catch (Exception ex)
         {
             Console.WriteLine($"\n❌ Erreur lors de la correction : {ex.Message}");
+        }
+    }
+
+    static async Task CorrigerCopieAvecConsensusAsync(JsonDatabaseService dbService, CorrectionService correctionService)
+    {
+        Console.WriteLine("\n╔══════════════════════════════════════════════════════╗");
+        Console.WriteLine("║           CORRECTION AVEC CONSENSUS (MULTI)          ║");
+        Console.WriteLine("║        🚀 Commission d'harmonisation virtuelle       ║");
+        Console.WriteLine("╚══════════════════════════════════════════════════════╝");
+
+        // Afficher les devoirs disponibles
+        var devoirs = await dbService.LireDevoirsAsync();
+        if (devoirs.Count == 0)
+        {
+            Console.WriteLine("Aucun devoir disponible. Créez d'abord un devoir.");
+            return;
+        }
+
+        Console.WriteLine("\nDevoirs disponibles :");
+        foreach (var devoir in devoirs)
+        {
+            Console.WriteLine($"{devoir.Id}. {devoir.Titre} ({devoir.Type})");
+        }
+
+        Console.Write("\nSélectionnez l'ID du devoir : ");
+        if (!int.TryParse(Console.ReadLine(), out int devoirId))
+        {
+            Console.WriteLine("ID invalide.");
+            return;
+        }
+
+        var devoirSelectionne = devoirs.FirstOrDefault(d => d.Id == devoirId);
+        if (devoirSelectionne == null)
+        {
+            Console.WriteLine("Devoir introuvable.");
+            return;
+        }
+        
+        Console.WriteLine($"\nDevoir sélectionné : {devoirSelectionne.Titre}");
+        Console.WriteLine($"Énoncé : {devoirSelectionne.Enonce}");
+        Console.WriteLine($"Type : {devoirSelectionne.Type}");        // Configuration du consensus
+        Console.WriteLine("\n" + new string('─', 60));
+        Console.WriteLine("CONFIGURATION DU CONSENSUS");
+        Console.WriteLine(new string('─', 60));
+        Console.Write("Nombre d'évaluations par compétence (recommandé: 20-50) : ");
+        if (!int.TryParse(Console.ReadLine(), out int nombreEvaluations) || nombreEvaluations < 3)
+        {
+            Console.WriteLine("Utilisation de la valeur par défaut : 20 évaluations");
+            nombreEvaluations = 20;
+        }
+
+        Console.Write("Nombre de requêtes parallèles simultanées (recommandé: 3-8) : ");
+        if (!int.TryParse(Console.ReadLine(), out int maxParallelism) || maxParallelism < 1)
+        {
+            Console.WriteLine("Utilisation de la valeur par défaut : 5 requêtes simultanées");
+            maxParallelism = 5;
+        }
+
+        if (nombreEvaluations > 100)
+        {
+            Console.Write($"⚠️  {nombreEvaluations} évaluations = temps d'exécution très long. Continuer ? (o/n) : ");
+            if (Console.ReadLine()?.ToLower() != "o")
+            {
+                return;
+            }
+        }
+
+        // Question sur le PAP
+        Console.WriteLine("\n" + new string('─', 60));
+        Console.WriteLine("INFORMATIONS SUR L'ÉLÈVE");
+        Console.WriteLine(new string('─', 60));
+        Console.Write("L'élève dispose-t-il d'un PAP (Plan d'Accompagnement Personnalisé) ? (1 = Oui, 2 = Non) : ");
+        var reponsePAP = Console.ReadLine();
+        bool aPAP = reponsePAP == "1";
+
+        if (aPAP)
+        {
+            Console.WriteLine("ℹ️  PAP détecté : La qualité de l'expression ne sera pas évaluée.");
+        }
+
+        // Saisie de la copie
+        Console.WriteLine("\n" + new string('─', 60));
+        Console.WriteLine("SAISIE DE LA COPIE À CORRIGER");
+        Console.WriteLine(new string('─', 60));
+        Console.WriteLine("1. Saisir le texte directement");
+        Console.WriteLine("2. Charger depuis un fichier");
+        Console.Write("Votre choix : ");
+
+        var choixCopie = Console.ReadLine();
+        string copie = "";
+
+        switch (choixCopie)
+        {
+            case "1":
+                Console.WriteLine("\nSaisissez la copie (terminez par une ligne vide) :");
+                var lignes = new List<string>();
+                string? ligne;
+                while (!string.IsNullOrWhiteSpace(ligne = Console.ReadLine()))
+                {
+                    lignes.Add(ligne);
+                }
+                copie = string.Join("\n", lignes);
+                break;
+
+            case "2":
+                Console.Write("Chemin du fichier : ");
+                var cheminFichier = Console.ReadLine();
+                if (File.Exists(cheminFichier))
+                {
+                    copie = await File.ReadAllTextAsync(cheminFichier);
+                }
+                else
+                {
+                    Console.WriteLine("Fichier introuvable.");
+                    return;
+                }
+                break;
+
+            default:
+                Console.WriteLine("Choix invalide.");
+                return;
+        }
+
+        if (!CorrectionService.ValiderCopie(copie))
+        {
+            Console.WriteLine("La copie doit contenir au moins 500 caractères.");
+            return;
+        }
+
+        // Estimation du temps
+        var competences = devoirSelectionne.Bareme?.Competences ?? new List<Competence>();
+        if (aPAP)
+        {
+            if (devoirSelectionne.Type?.ToLower() == "explication")
+            {
+                competences = competences.Where(c => c.Nom != "Expression et rédaction").ToList();
+            }
+            else
+            {
+                competences = competences.Where(c => c.Nom != "Maîtrise de la langue française").ToList();
+            }
+        }
+        
+        var totalEvaluations = competences.Count * nombreEvaluations;
+        var tempsEstime = totalEvaluations * 3; // 3 secondes par évaluation
+        
+        Console.WriteLine($"\n⏱️  Estimation :");
+        Console.WriteLine($"   • {competences.Count} compétences × {nombreEvaluations} évaluations = {totalEvaluations} appels LLM");
+        Console.WriteLine($"   • Temps estimé : ~{tempsEstime / 60:F0} minutes");
+        Console.Write("\nVoulez-vous continuer ? (o/n) : ");
+        
+        if (Console.ReadLine()?.ToLower() != "o")
+        {
+            return;
+        }
+
+        // Correction avec consensus
+        try
+        {
+            var startTime = DateTime.Now;
+            var correction = await correctionService.CorrigerCopieAvecConsensusAsync(devoirSelectionne, copie, nombreEvaluations, maxParallelism, aPAP);
+            var endTime = DateTime.Now;
+            var duration = endTime - startTime;
+
+            Console.WriteLine($"\n⏱️  Temps total de correction : {duration.TotalMinutes:F1} minutes");
+            
+            CorrectionService.AfficherResultatsCorrection(correction, devoirSelectionne.Bareme?.Competences ?? new List<Competence>());
+            CorrectionService.ExporterCorrectionAsync(correction, devoirSelectionne).Wait();
+
+            // Proposer l'annotation automatique après la correction
+            Console.WriteLine("\n" + new string('─', 60));
+            Console.Write("🔍 Voulez-vous générer des annotations pour cette copie ? (o/n) : ");
+            var choixAnnotation = Console.ReadLine()?.ToLower();
+            
+            if (choixAnnotation == "o" || choixAnnotation == "oui")
+            {
+                await GenererAnnotationsPourCorrection(correction, devoirSelectionne);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"\n❌ Erreur lors de la correction avec consensus : {ex.Message}");
         }
     }
 
